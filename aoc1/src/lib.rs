@@ -47,14 +47,10 @@ pub fn part2(input: &str) -> u32 {
     assert_eq!(r, "");
 
     // 2nd list has occurences
-    let mut freq_map = HashMap::new();
-    for v in d.v2.iter() {
-        if let Some(value) = freq_map.get_mut(v) {
-            *value += 1u32;
-        } else {
-            freq_map.insert(*v, 1u32);
-        }
-    }
+    let freq_map = d.v2.iter().copied().fold(HashMap::new(), |mut map, value| {
+        map.entry(value).and_modify(|frq| *frq += 1).or_insert(1);
+        map
+    });
 
     d.v1.iter()
         .fold(0u32, |s, v| s + v * freq_map.get(v).unwrap_or(&0u32))
