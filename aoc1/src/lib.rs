@@ -1,3 +1,5 @@
+use std::iter::zip;
+
 
 #[derive(Debug, PartialEq)]
 struct Input {
@@ -7,7 +9,7 @@ struct Input {
 
 mod parse {
 
-use nom::{character::complete::{digit1, line_ending, multispace1, u32 as parse_u32}, multi::separated_list1, sequence::separated_pair, IResult, Parser};
+use nom::{character::complete::{digit1, line_ending, multispace1, u32 as parse_u32}, multi::{many0, separated_list1}, sequence::separated_pair, IResult, Parser};
 use nom_supreme::ParserExt;
 use super::Input;
 
@@ -18,12 +20,12 @@ pub(crate) fn pair(input: &str) -> IResult<&str, (u32, u32)> {
 
 pub fn input(input: &str) -> IResult<&str, Input> {
    separated_list1(line_ending, pair)
+       .terminated(many0(line_ending))
        .map(|pairs| {
            Input{
                v1: pairs.iter().map(|v| {v.0}).collect(),
                v2: pairs.iter().map(|v| {v.1}).collect(),
            }
-
        })
        .parse(input)
 }
@@ -31,9 +33,16 @@ pub fn input(input: &str) -> IResult<&str, Input> {
 }
 
 
-pub fn part1(_input: &str) -> usize {
-    // TODO: implement
-    0
+pub fn part1(input: &str) -> u32 {
+    let (r, mut d) = parse::input(input).expect("Valid input");
+    assert_eq!(r, "");
+
+    d.v1.sort();
+    d.v2.sort();
+
+    zip(d.v1, d.v2).fold(0u32, |v, p| {
+        v + p.1.abs_diff(p.0)
+    })
 }
 
 pub fn part2(_input: &str) -> usize {
@@ -62,7 +71,7 @@ mod tests {
 
     #[test]
     fn test_part1() {
-        assert_eq!(part1(include_str!("../example.txt")), 0);
+        assert_eq!(part1(include_str!("../example.txt")), 11);
     }
 
     #[test]
