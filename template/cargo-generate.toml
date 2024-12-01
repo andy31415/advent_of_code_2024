@@ -1,0 +1,4 @@
+[hooks]
+#init = [...]
+#pre = [...]
+post = ["renames.rhai"]

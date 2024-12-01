@@ -1,0 +1,27 @@
+[package]
+name = "{{project-name}}"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name="{{project-name}}"
+path="src/{{project-name}}.rs"
+
+[[bench]]
+name="{{project-name}}"
+path="benches/{{project-name}}.rs"
+harness = false
+
+[features]
+dhat-heap = []
+
+[dependencies]
+divan = {workspace=true}
+dhat = {workspace=true}
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[dev-dependencies]
+itertools = {workspace=true}
