@@ -1,4 +1,4 @@
-use std::iter::zip;
+use std::{collections::HashMap, iter::zip};
 
 #[derive(Debug, PartialEq)]
 struct Input {
@@ -42,9 +42,22 @@ pub fn part1(input: &str) -> u32 {
     zip(d.v1, d.v2).fold(0u32, |v, p| v + p.1.abs_diff(p.0))
 }
 
-pub fn part2(_input: &str) -> usize {
-    // TODO: implement
-    0
+pub fn part2(input: &str) -> u32 {
+    let (r, d) = parse::input(input).expect("Valid input");
+    assert_eq!(r, "");
+
+    // 2nd list has occurences
+    let mut freq_map = HashMap::new();
+    for v in d.v2.iter() {
+        if let Some(value) = freq_map.get_mut(v) {
+            *value += 1u32;
+        } else {
+            freq_map.insert(*v, 1u32);
+        }
+    }
+
+    d.v1.iter()
+        .fold(0u32, |s, v| s + v * freq_map.get(v).unwrap_or(&0u32))
 }
 
 #[cfg(test)]
@@ -76,6 +89,6 @@ mod tests {
 
     #[test]
     fn test_part2() {
-        assert_eq!(part2(include_str!("../example.txt")), 0);
+        assert_eq!(part2(include_str!("../example.txt")), 31);
     }
 }
