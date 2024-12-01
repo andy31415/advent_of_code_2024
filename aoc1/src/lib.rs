@@ -9,7 +9,7 @@ struct Input {
 
 mod parse {
 
-use nom::{character::complete::{digit1, line_ending, multispace1, u32 as parse_u32}, multi::{many0, separated_list1}, sequence::separated_pair, IResult, Parser};
+use nom::{character::complete::{line_ending, multispace1, u32 as parse_u32}, multi::{many0, separated_list1}, sequence::separated_pair, IResult, Parser};
 use nom_supreme::ParserExt;
 use super::Input;
 
