@@ -1,9 +1,42 @@
-pub fn part1(input: &str) -> usize {
+
+#[derive(Debug, PartialEq)]
+struct Input {
+    v1: Vec<u32>,
+    v2: Vec<u32>,
+}
+
+mod parse {
+
+use nom::{character::complete::{digit1, line_ending, multispace1, u32 as parse_u32}, multi::separated_list1, sequence::separated_pair, IResult, Parser};
+use nom_supreme::ParserExt;
+use super::Input;
+
+pub(crate) fn pair(input: &str) -> IResult<&str, (u32, u32)> {
+    separated_pair(parse_u32, multispace1 , parse_u32)
+        .parse(input)
+}
+
+pub fn input(input: &str) -> IResult<&str, Input> {
+   separated_list1(line_ending, pair)
+       .map(|pairs| {
+           Input{
+               v1: pairs.iter().map(|v| {v.0}).collect(),
+               v2: pairs.iter().map(|v| {v.1}).collect(),
+           }
+
+       })
+       .parse(input)
+}
+
+}
+
+
+pub fn part1(_input: &str) -> usize {
     // TODO: implement
     0
 }
 
-pub fn part2(input: &str) -> usize {
+pub fn part2(_input: &str) -> usize {
     // TODO: implement
     0
 }
@@ -11,6 +44,21 @@ pub fn part2(input: &str) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn test_parse_pair() {
+        assert_eq!(parse::pair("1 2").expect("valid").1, (1, 2));
+        assert_eq!(parse::pair("123   100").expect("valid").1, (123, 100));
+        assert_eq!(parse::pair("4   3").expect("valid").1, (4, 3));
+    }
+
+    #[test]
+    fn test_parse_input() {
+        assert_eq!(parse::input("1 2\n3 4").expect("valid").1, Input {
+            v1: vec![1u32, 3u32],
+            v2: vec![2u32, 4u32],
+        });
+    }
 
     #[test]
     fn test_part1() {
