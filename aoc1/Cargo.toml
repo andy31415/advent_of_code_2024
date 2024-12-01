@@ -1,0 +1,27 @@
+[package]
+name = "aoc1"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name="aoc1"
+path="src/aoc1.rs"
+
+[[bench]]
+name="aoc1"
+path="benches/aoc1.rs"
+harness = false
+
+[features]
+dhat-heap = []
+
+[dependencies]
+divan = {workspace=true}
+dhat = {workspace=true}
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+
+[dev-dependencies]
+itertools = {workspace=true}

@@ -1,0 +1,37 @@
+[workspace]
+resolver="2"
+members = [ "aoc*" ]
+
+[workspace.dependencies]
+
+glam = "*"
+nom = "*"
+dhat = "*"
+divan = "*"
+thiserror = "*"
+miette = { version = "*", features = ["fancy"] }
+criterion = { version = "*", features = ["html_reports"] }
+petgraph = "*"
+rayon = "*"
+rstest = "*"
+rstest_reuse = "*"
+tracing = "*"
+tracing-subscriber = {version="0.3.1", features = ["env-filter"]}
+tracing-tracy = "*"
+tracy-client = "*"
+tracy-client-sys = "*"
+itertools = "*"
+test-log = {version = "0.2.14", features=["log", "trace"]}
+
+[profile.release]
+debug = 1
+optlevel = "3"
+
+
+[profile.flamegraph]
+inherits = "release"
+debug = true
+
+[profile.dhat]
+inherits = "release"
+debug = true
