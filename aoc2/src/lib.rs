@@ -1,4 +1,6 @@
-use itertools::zip;
+use std::iter::zip;
+
+use itertools::enumerate;
 use parse::input;
 
 #[derive(Debug, PartialEq)]
@@ -26,45 +28,119 @@ mod parse {
     }
 }
 
+#[derive(PartialEq, Debug)]
+enum Safety {
+    Up,
+    Down,
+    OutOfRange,
+}
+
+fn is_safe(a: u32, b: u32) -> Safety {
+    if b.abs_diff(a) > 3 {
+        return Safety::OutOfRange;
+    }
+
+    match a.cmp(&b) {
+        std::cmp::Ordering::Less => Safety::Down,
+        std::cmp::Ordering::Greater => Safety::Up,
+        std::cmp::Ordering::Equal => Safety::OutOfRange,
+    }
+}
+
 /// Safe means:
 ///    - strictly increasing/decreasing
 ///    - at least one, at most 3
-fn is_safe(vec: &Vec<u32>) -> bool {
-    let mut up = false;
-    let mut down = false;
+fn is_safe_level(vec: &Vec<u32>) -> bool {
+    let mut safety = None;
+
     for (a, b) in zip(vec.iter(), vec.iter().skip(1)) {
-        if b.abs_diff(*a) > 3 {
-            return false;
-        }
+        let cur = is_safe(*a, *b);
 
-        match a.cmp(b) {
-            std::cmp::Ordering::Less => down = true,
-            std::cmp::Ordering::Greater => up = true,
-            std::cmp::Ordering::Equal => return false,
-        }
-
-        if up && down {
-            return false;
+        match safety {
+            None => safety = Some(cur),
+            Some(value) if value != cur => return false,
+            _ => {}
         }
     }
 
     true
 }
 
+fn safe_level_if_remove(vec: &Vec<u32>, idx: usize) -> bool {
+    if idx >= vec.len() {
+        return false;
+    }
+
+    let mut oth = vec.clone();
+    oth.remove(idx);
+
+    is_safe_level(&oth)
+}
+
+/// Figure out which positions something unsafe resides on
+fn is_safe_by_removal(vec: &Vec<u32>) -> bool {
+    let states = zip(vec.iter(), vec.iter().skip(1))
+        .map(|(a, b)| is_safe(*a, *b))
+        .collect::<Vec<_>>();
+
+    // at this point, invalid locations are left/right when there is a greater or a single up/down
+    // difference
+
+    let ups = enumerate(states.iter())
+        .filter(|(idx, a)| **a == Safety::Up)
+        .collect::<Vec<_>>();
+    let downs = enumerate(states.iter())
+        .filter(|(idx, a)| **a == Safety::Down)
+        .collect::<Vec<_>>();
+    let ranges = enumerate(states.iter())
+        .filter(|(idx, a)| **a == Safety::OutOfRange)
+        .collect::<Vec<_>>();
+
+    match ranges.len() {
+        0 => { /* ok, all in range */ }
+        1 => {
+            let (p1, _) = ranges.first().expect("has 1 element");
+            return safe_level_if_remove(vec, *p1) || safe_level_if_remove(vec, *p1 + 1);
+        }
+        2 => {
+            let (p1, _) = ranges.first().expect("has 2 elements");
+            let (p2, _) = ranges.get(1).expect("has 2 elements");
+
+            if *p2 != *p1 + 1 {
+                return false;
+            }
+
+            return safe_level_if_remove(vec, *p2);
+        }
+        _ => return false,
+    }
+
+    // we need to try to remove ups or downs
+    if ups.len() == 1 {
+        let (p1, _) = ups.first().expect("has 1 element");
+        return safe_level_if_remove(vec, *p1) || safe_level_if_remove(vec, *p1 + 1);
+    }
+
+    if downs.len() == 1 {
+        let (p1, _) = downs.first().expect("has 1 element");
+        return safe_level_if_remove(vec, *p1) || safe_level_if_remove(vec, *p1 + 1);
+    }
+
+    is_safe_level(vec)
+}
+
 pub fn part1(s: &str) -> usize {
     let (r, data) = input(s).expect("good input");
     assert!(r.is_empty());
 
-    let mut cnt = 0;
-    for n in data.levels.into_iter().filter(is_safe) {
-        cnt += 1
-    }
-    cnt
+    data.levels.into_iter().filter(is_safe_level).count()
 }
 
 pub fn part2(s: &str) -> usize {
-    // TODO: implement
-    0
+    let (r, data) = input(s).expect("good input");
+    assert!(r.is_empty());
+
+    data.levels.into_iter().filter(is_safe_by_removal).count()
 }
 
 #[cfg(test)]
@@ -75,8 +151,8 @@ mod tests {
 
     #[test]
     fn test_safe() {
-        assert!(is_safe(&vec![7u32, 6u32, 4u32, 2u32, 1u32]));
-        assert!(!is_safe(&vec![7u32, 7u32, 4u32, 2u32, 1u32]));
+        assert!(is_safe_level(&vec![7u32, 6u32, 4u32, 2u32, 1u32]));
+        assert!(!is_safe_level(&vec![7u32, 7u32, 4u32, 2u32, 1u32]));
     }
 
     #[test]
@@ -95,12 +171,28 @@ mod tests {
     }
 
     #[test]
+    fn test_safe_level_if_remove() {
+        let v = vec![1u32, 2u32, 3u32, 10u32, 4u32];
+
+        assert!(!safe_level_if_remove(&v, 0));
+        assert!(!safe_level_if_remove(&v, 1));
+        assert!(!safe_level_if_remove(&v, 2));
+        assert!(safe_level_if_remove(&v, 3));
+        assert!(!safe_level_if_remove(&v, 4));
+        assert!(!safe_level_if_remove(&v, 5));
+
+        let v = vec![10u32, 2u32, 3u32, 10u32, 4u32];
+        assert!(!safe_level_if_remove(&v, 0));
+        assert!(!safe_level_if_remove(&v, 3));
+    }
+
+    #[test]
     fn test_part1() {
         assert_eq!(part1(include_str!("../example.txt")), 2);
     }
 
     #[test]
     fn test_part2() {
-        assert_eq!(part2(include_str!("../example.txt")), 0);
+        assert_eq!(part2(include_str!("../example.txt")), 4);
     }
 }
