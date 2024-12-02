@@ -154,8 +154,8 @@ mod tests {
 
     #[test]
     fn test_safe() {
-        assert!(is_safe_level(&vec![7u32, 6u32, 4u32, 2u32, 1u32]));
-        assert!(!is_safe_level(&vec![7u32, 7u32, 4u32, 2u32, 1u32]));
+        assert!(is_safe_level(&[7u32, 6u32, 4u32, 2u32, 1u32]));
+        assert!(!is_safe_level(&[7u32, 7u32, 4u32, 2u32, 1u32]));
     }
 
     #[test]
