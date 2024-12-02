@@ -50,7 +50,7 @@ fn is_safe(a: u32, b: u32) -> Safety {
 /// Safe means:
 ///    - strictly increasing/decreasing
 ///    - at least one, at most 3
-fn is_safe_level(vec: &Vec<u32>) -> bool {
+fn is_safe_level(vec: &[u32]) -> bool {
     let mut safety = None;
 
     for (a, b) in zip(vec.iter(), vec.iter().skip(1)) {
@@ -87,13 +87,13 @@ fn is_safe_by_removal(vec: &Vec<u32>) -> bool {
     // difference
 
     let ups = enumerate(states.iter())
-        .filter(|(idx, a)| **a == Safety::Up)
+        .filter(|(_, a)| **a == Safety::Up)
         .collect::<Vec<_>>();
     let downs = enumerate(states.iter())
-        .filter(|(idx, a)| **a == Safety::Down)
+        .filter(|(_, a)| **a == Safety::Down)
         .collect::<Vec<_>>();
     let ranges = enumerate(states.iter())
-        .filter(|(idx, a)| **a == Safety::OutOfRange)
+        .filter(|(_, a)| **a == Safety::OutOfRange)
         .collect::<Vec<_>>();
 
     match ranges.len() {
@@ -133,7 +133,7 @@ pub fn part1(s: &str) -> usize {
     let (r, data) = input(s).expect("good input");
     assert!(r.is_empty());
 
-    data.levels.into_iter().filter(is_safe_level).count()
+    data.levels.into_iter().filter(|x| is_safe_level(x)).count()
 }
 
 pub fn part2(s: &str) -> usize {
