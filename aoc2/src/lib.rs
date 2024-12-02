@@ -66,19 +66,19 @@ fn is_safe_level(vec: &[u32]) -> bool {
     true
 }
 
-fn safe_level_if_remove(vec: &Vec<u32>, idx: usize) -> bool {
+fn safe_level_if_remove(vec: &[u32], idx: usize) -> bool {
     if idx >= vec.len() {
         return false;
     }
 
-    let mut oth = vec.clone();
+    let mut oth: Vec<u32> = vec.into();
     oth.remove(idx);
 
     is_safe_level(&oth)
 }
 
 /// Figure out which positions something unsafe resides on
-fn is_safe_by_removal(vec: &Vec<u32>) -> bool {
+fn is_safe_by_removal(vec: &[u32]) -> bool {
     let states = zip(vec.iter(), vec.iter().skip(1))
         .map(|(a, b)| is_safe(*a, *b))
         .collect::<Vec<_>>();
@@ -140,7 +140,10 @@ pub fn part2(s: &str) -> usize {
     let (r, data) = input(s).expect("good input");
     assert!(r.is_empty());
 
-    data.levels.into_iter().filter(is_safe_by_removal).count()
+    data.levels
+        .into_iter()
+        .filter(|x| is_safe_by_removal(x))
+        .count()
 }
 
 #[cfg(test)]
