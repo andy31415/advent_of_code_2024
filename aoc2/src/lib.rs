@@ -2,6 +2,7 @@ use std::iter::zip;
 
 use itertools::enumerate;
 use parse::input;
+use tracing::{event, instrument, Level};
 
 #[derive(Debug, PartialEq)]
 struct Input {
@@ -41,8 +42,8 @@ fn is_safe(a: u32, b: u32) -> Safety {
     }
 
     match a.cmp(&b) {
-        std::cmp::Ordering::Less => Safety::Down,
-        std::cmp::Ordering::Greater => Safety::Up,
+        std::cmp::Ordering::Less => Safety::Up,
+        std::cmp::Ordering::Greater => Safety::Down,
         std::cmp::Ordering::Equal => Safety::OutOfRange,
     }
 }
@@ -66,6 +67,7 @@ fn is_safe_level(vec: &[u32]) -> bool {
     true
 }
 
+#[instrument(ret)]
 fn safe_level_if_remove(vec: &[u32], idx: usize) -> bool {
     if idx >= vec.len() {
         return false;
@@ -78,6 +80,7 @@ fn safe_level_if_remove(vec: &[u32], idx: usize) -> bool {
 }
 
 /// Figure out which positions something unsafe resides on
+#[instrument(ret)]
 fn is_safe_by_removal(vec: &[u32]) -> bool {
     let states = zip(vec.iter(), vec.iter().skip(1))
         .map(|(a, b)| is_safe(*a, *b))
@@ -100,11 +103,14 @@ fn is_safe_by_removal(vec: &[u32]) -> bool {
         0 => { /* ok, all in range */ }
         1 => {
             let (p1, _) = ranges.first().expect("has 1 element");
+            event!(Level::INFO, "Out of rangge at index {}", *p1);
             return safe_level_if_remove(vec, *p1) || safe_level_if_remove(vec, *p1 + 1);
         }
         2 => {
             let (p1, _) = ranges.first().expect("has 2 elements");
             let (p2, _) = ranges.get(1).expect("has 2 elements");
+
+            event!(Level::INFO, "Out of rangge at index {} and {}", *p1, *p2);
 
             if *p2 != *p1 + 1 {
                 return false;
@@ -118,11 +124,13 @@ fn is_safe_by_removal(vec: &[u32]) -> bool {
     // we need to try to remove ups or downs
     if ups.len() == 1 {
         let (p1, _) = ups.first().expect("has 1 element");
+        event!(Level::INFO, "Single UP at  index {}", *p1);
         return safe_level_if_remove(vec, *p1) || safe_level_if_remove(vec, *p1 + 1);
     }
 
     if downs.len() == 1 {
         let (p1, _) = downs.first().expect("has 1 element");
+        event!(Level::INFO, "Single DOWN at  index {}", *p1);
         return safe_level_if_remove(vec, *p1) || safe_level_if_remove(vec, *p1 + 1);
     }
 
