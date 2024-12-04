@@ -1,3 +1,7 @@
+use std::num::ParseIntError;
+
+use regex::Captures;
+
 #[derive(PartialEq, Eq, Debug)]
 struct Multiplication {
     left: usize,
@@ -10,14 +14,47 @@ impl Multiplication {
     }
 }
 
+impl TryFrom<Captures<'_>> for Multiplication {
+    type Error = ParseIntError;
+
+    fn try_from(m: Captures) -> Result<Self, Self::Error> {
+        Ok(Multiplication {
+            left: m.name("left").expect("Has a match").as_str().parse()?,
+            right: m.name("right").expect("Has a match").as_str().parse()?,
+        })
+    }
+}
+
 #[derive(PartialEq, Eq, Debug)]
 struct Input {
     items: Vec<Multiplication>,
 }
 
+enum Instruction {
+    Do,
+    Dont,
+    Mul(Multiplication),
+}
+
+impl TryFrom<Captures<'_>> for Instruction {
+    type Error = ParseIntError;
+
+    fn try_from(m: Captures) -> Result<Self, Self::Error> {
+        Ok(match m.get(0).expect("0 always exists").as_str() {
+            "do()" => Instruction::Do,
+            "don't()" => Instruction::Dont,
+            _ => Instruction::Mul(m.try_into()?),
+        })
+    }
+}
+
+struct Input2 {
+    items: Vec<Instruction>,
+}
+
 mod parse {
 
-    use super::{Input, Multiplication};
+    use super::{Input, Input2, Instruction, Multiplication};
     use regex::Regex;
 
     pub(crate) fn input(s: &str) -> Input {
@@ -26,20 +63,19 @@ mod parse {
         Input {
             items: expr
                 .captures_iter(s)
-                .map(|m| Multiplication {
-                    left: m
-                        .name("left")
-                        .expect("Has a match")
-                        .as_str()
-                        .parse()
-                        .expect("valid"),
-                    right: m
-                        .name("right")
-                        .expect("Has a match")
-                        .as_str()
-                        .parse()
-                        .expect("valid"),
-                })
+                .map(|m| m.try_into().expect("valid"))
+                .collect(),
+        }
+    }
+
+    pub(crate) fn input2(s: &str) -> Input2 {
+        let expr = Regex::new(r"mul\((?<left>\d+),(?<right>\d+)\)|do\(\)|don't\(\)")
+            .expect("Valid expression");
+
+        Input2 {
+            items: expr
+                .captures_iter(s)
+                .map(|m| m.try_into().expect("valid"))
                 .collect(),
         }
     }
@@ -54,9 +90,22 @@ pub fn part1(s: &str) -> usize {
         .unwrap_or(0)
 }
 
-pub fn part2(_s: &str) -> usize {
-    // TODO: implement
-    0
+pub fn part2(s: &str) -> usize {
+    let mut result = 0;
+    let mut on = true;
+
+    for item in parse::input2(s).items.iter() {
+        match item {
+            Instruction::Do => on = true,
+            Instruction::Dont => on = false,
+            Instruction::Mul(m) => {
+                if on {
+                    result += m.value();
+                }
+            }
+        }
+    }
+    result
 }
 
 #[cfg(test)]
@@ -105,6 +154,6 @@ mod tests {
 
     #[test]
     fn test_part2() {
-        assert_eq!(part2(include_str!("../example.txt")), 0);
+        assert_eq!(part2(include_str!("../example.txt")), 48);
     }
 }
