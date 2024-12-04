@@ -26,6 +26,7 @@ nom.workspace = true
 nom-supreme = "0.8.0"
 itertools.workspace = true
 test-log.workspace = true
+regex = { version = "1.11.1", features = ["use_std"] }
 
 [dev-dependencies]
 itertools = { workspace = true }
