@@ -6,22 +6,26 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [[bin]]
-name="aoc3"
-path="src/aoc3.rs"
+name = "aoc3"
+path = "src/aoc3.rs"
 
 [[bench]]
-name="aoc3"
-path="benches/aoc3.rs"
+name = "aoc3"
+path = "benches/aoc3.rs"
 harness = false
 
 [features]
 dhat-heap = []
 
 [dependencies]
-divan = {workspace=true}
-dhat = {workspace=true}
+divan = { workspace = true }
+dhat = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+nom.workspace = true
+nom-supreme = "0.8.0"
+itertools.workspace = true
+test-log.workspace = true
 
 [dev-dependencies]
-itertools = {workspace=true}
+itertools = { workspace = true }
