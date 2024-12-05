@@ -100,7 +100,8 @@ impl<'a> Matrix {
 
         // is XMAS if M & S exist
         let mut cnt = 0;
-        for d in [Heading::N, Heading::NE] {
+        //for d in [Heading::N, Heading::NE] {
+        for d in [Heading::NE] {
             // one direction has to be MAS
             match self
                 .chars_at(*p + d.direction(), &d.flip())
@@ -124,6 +125,26 @@ impl<'a> Matrix {
                 _ => continue,
             }
             tracing::info!("FOUND AT {:?} via {:?}", p, d);
+
+            let start = *p + Heading::NW.direction();
+            tracing::info!(
+                "{} {} {}",
+                self.at(&start).unwrap_or('?'),
+                self.at(&(start + Point { x: 1, y: 0 })).unwrap_or('?'),
+                self.at(&(start + Point { x: 2, y: 0 })).unwrap_or('?')
+            );
+            tracing::info!(
+                "{} {} {}",
+                self.at(&(start + Point { x: 0, y: 1 })).unwrap_or('?'),
+                self.at(&(start + Point { x: 1, y: 1 })).unwrap_or('?'),
+                self.at(&(start + Point { x: 2, y: 1 })).unwrap_or('?')
+            );
+            tracing::info!(
+                "{} {} {}",
+                self.at(&(start + Point { x: 0, y: 2 })).unwrap_or('?'),
+                self.at(&(start + Point { x: 1, y: 2 })).unwrap_or('?'),
+                self.at(&(start + Point { x: 2, y: 2 })).unwrap_or('?')
+            );
 
             cnt += 1
         }
@@ -296,24 +317,10 @@ mod tests {
         assert!(r.is_empty());
         assert_eq!(m.xmas_count(&Point { x: 1, y: 1 }), 1);
 
+        // need an X (not a +)
         let (r, m) = super::parse::input_matrix(".M.\nMAS\n.S.").expect("parse works");
         assert!(r.is_empty());
-        assert_eq!(m.xmas_count(&Point { x: 1, y: 1 }), 1);
-        assert_eq!(m.xmas_count(&Point { x: 0, y: 0 }), 0);
-
-        let (r, m) = super::parse::input_matrix(".S.\nMAS\n.M.").expect("parse works");
-        assert!(r.is_empty());
-        assert_eq!(m.xmas_count(&Point { x: 1, y: 1 }), 1);
-        assert_eq!(m.xmas_count(&Point { x: 0, y: 0 }), 0);
-
-        let (r, m) = super::parse::input_matrix(".S.\nSAM\n.M.").expect("parse works");
-        assert!(r.is_empty());
-        assert_eq!(m.xmas_count(&Point { x: 1, y: 1 }), 1);
-        assert_eq!(m.xmas_count(&Point { x: 0, y: 0 }), 0);
-
-        let (r, m) = super::parse::input_matrix("MSS\nSAM\nMMS").expect("parse works");
-        assert!(r.is_empty());
-        assert_eq!(m.xmas_count(&Point { x: 1, y: 1 }), 2);
+        assert_eq!(m.xmas_count(&Point { x: 1, y: 1 }), 0);
         assert_eq!(m.xmas_count(&Point { x: 0, y: 0 }), 0);
     }
 
