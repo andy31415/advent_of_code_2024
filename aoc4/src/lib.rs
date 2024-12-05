@@ -156,10 +156,7 @@ impl Direction for Heading {
 mod parse {
     use super::Matrix;
     use nom::{
-        character::{
-            self,
-            complete::newline,
-        },
+        character::{self, complete::newline},
         multi::{many0, many1, separated_list0},
         IResult, Parser,
     };
@@ -199,7 +196,6 @@ pub fn part2(input: &str) -> usize {
 #[cfg(test)]
 mod tests {
     use itertools::Itertools;
-    
 
     use super::*;
 
