@@ -54,7 +54,7 @@ struct Input2 {
 
 mod parse {
 
-    use super::{Input, Input2, Instruction, Multiplication};
+    use super::{Input, Input2};
     use regex::Regex;
 
     pub(crate) fn input(s: &str) -> Input {

@@ -1,11 +1,12 @@
 [workspace]
-resolver="2"
-members = [ "aoc*" ]
+resolver = "2"
+members = ["aoc*"]
 
 [workspace.dependencies]
 
 glam = "*"
 nom = "*"
+nom-supreme = "*"
 dhat = "*"
 divan = "*"
 thiserror = "*"
@@ -16,12 +17,12 @@ rayon = "*"
 rstest = "*"
 rstest_reuse = "*"
 tracing = "*"
-tracing-subscriber = {version="0.3.1", features = ["env-filter"]}
+tracing-subscriber = { version = "0.3.1", features = ["env-filter"] }
 tracing-tracy = "*"
 tracy-client = "*"
 tracy-client-sys = "*"
 itertools = "*"
-test-log = {version = "0.2.14", features=["log", "trace"]}
+test-log = { version = "0.2.14", features = ["log", "trace"] }
 
 [profile.release]
 debug = 1

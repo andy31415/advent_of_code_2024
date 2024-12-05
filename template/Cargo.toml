@@ -6,22 +6,26 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [[bin]]
-name="{{project-name}}"
-path="src/{{project-name}}.rs"
+name = "{{project-name}}"
+path = "src/{{project-name}}.rs"
 
 [[bench]]
-name="{{project-name}}"
-path="benches/{{project-name}}.rs"
+name = "{{project-name}}"
+path = "benches/{{project-name}}.rs"
 harness = false
 
 [features]
 dhat-heap = []
 
 [dependencies]
-divan = {workspace=true}
-dhat = {workspace=true}
+divan = { workspace = true }
+dhat = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true }
+nom.workspace = true
+nom-supreme.workspace = true
+itertools.workspace = true
+test-log.workspace = true
 
 [dev-dependencies]
-itertools = {workspace=true}
+itertools = { workspace = true }
