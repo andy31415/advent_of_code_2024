@@ -122,6 +122,7 @@ impl<'a> Matrix {
                 "MAS" | "SAM" => {}
                 _ => continue,
             }
+            tracing::info!("FOUND AT {:?} via {:?}", p, d);
 
             return true;
         }
@@ -292,6 +293,23 @@ mod tests {
     #[test]
     fn test_part1() {
         assert_eq!(part1(include_str!("../example.txt")), 18);
+    }
+
+    #[test]
+    fn test_xmas() {
+        let (r, m) = super::parse::input_matrix("M.S\n.A.\nM.S").expect("parse works");
+        assert!(r.is_empty());
+        assert!(m.is_xmas_at(&Point { x: 1, y: 1 }));
+
+        let (r, m) = super::parse::input_matrix(".M.\nMAS\n.S.").expect("parse works");
+        assert!(r.is_empty());
+        assert!(m.is_xmas_at(&Point { x: 1, y: 1 }));
+        assert!(!m.is_xmas_at(&Point { x: 0, y: 0 }));
+
+        let (r, m) = super::parse::input_matrix(".S.\nMAS\n.M.").expect("parse works");
+        assert!(r.is_empty());
+        assert!(m.is_xmas_at(&Point { x: 1, y: 1 }));
+        assert!(!m.is_xmas_at(&Point { x: 0, y: 0 }));
     }
 
     #[test]
