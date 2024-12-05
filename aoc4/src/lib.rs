@@ -1,5 +1,4 @@
-use itertools::Position;
-use std::{fmt::Debug, ops::Add, option::Iter};
+use std::{fmt::Debug, ops::Add};
 use tracing::instrument;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -20,7 +19,7 @@ struct CharsIterator<'a, D: Direction> {
     direction: &'a D,
 }
 
-impl<'a, D: Direction + Debug> Iterator for CharsIterator<'a, D> {
+impl<D: Direction + Debug> Iterator for CharsIterator<'_, D> {
     type Item = char;
 
     #[instrument(ret)]
@@ -47,14 +46,12 @@ impl<'a> PointsIterator<'a> {
     }
 }
 
-impl<'a> Iterator for PointsIterator<'a> {
+impl Iterator for PointsIterator<'_> {
     type Item = Point;
 
     fn next(&mut self) -> Option<Self::Item> {
         // find out if current is real
-        if self.matrix.at(&self.current).is_none() {
-            return None;
-        }
+        self.matrix.at(&self.current)?;
 
         let retval = self.current;
 
@@ -91,7 +88,7 @@ impl<'a> Matrix {
 
     fn chars_at<D: Direction>(&'a self, p: Point, d: &'a D) -> CharsIterator<'a, D> {
         CharsIterator {
-            matrix: &self,
+            matrix: self,
             current: p,
             direction: d,
         }
@@ -161,9 +158,8 @@ mod parse {
     use nom::{
         character::{
             self,
-            complete::{anychar, newline},
+            complete::newline,
         },
-        complete,
         multi::{many0, many1, separated_list0},
         IResult, Parser,
     };
@@ -203,7 +199,7 @@ pub fn part2(input: &str) -> usize {
 #[cfg(test)]
 mod tests {
     use itertools::Itertools;
-    use tracing_test::traced_test;
+    
 
     use super::*;
 
