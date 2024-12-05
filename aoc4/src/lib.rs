@@ -1,5 +1,4 @@
 use std::{fmt::Debug, ops::Add};
-use tracing::instrument;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 struct Matrix {
@@ -22,7 +21,7 @@ struct CharsIterator<'a> {
 impl Iterator for CharsIterator<'_> {
     type Item = char;
 
-    #[instrument(ret)]
+    //#[tracing::instrument(ret)]
     fn next(&mut self) -> Option<Self::Item> {
         let value = self.matrix.at(&self.current);
         if value.is_some() {
@@ -69,7 +68,6 @@ impl Iterator for PointsIterator<'_> {
 }
 
 impl<'a> Matrix {
-    #[instrument(ret)]
     fn at(&self, p: &Point) -> Option<char> {
         if p.y < 0 || p.y as usize >= self.rows.len() {
             return None;
@@ -92,6 +90,42 @@ impl<'a> Matrix {
             current: p,
             direction: d,
         }
+    }
+
+    fn is_xmas_at(&'a self, p: &Point) -> bool {
+        match self.at(p) {
+            Some('A') => {}
+            _ => return false, // A is in the middle
+        }
+
+        // is XMAS if M & S exist
+        for d in [Heading::N, Heading::NE] {
+            // one direction has to be MAS
+            match self
+                .chars_at(*p + d.direction(), &d.flip())
+                .take(3)
+                .collect::<String>()
+                .as_str()
+            {
+                "MAS" | "SAM" => {}
+                _ => continue,
+            }
+
+            let other = d.turn_right_90();
+
+            match self
+                .chars_at(*p + other.direction(), &other.flip())
+                .take(3)
+                .collect::<String>()
+                .as_str()
+            {
+                "MAS" | "SAM" => {}
+                _ => continue,
+            }
+
+            return true;
+        }
+        false
     }
 }
 
@@ -130,6 +164,34 @@ impl Heading {
             Heading::W,
             Heading::NW,
         ]
+    }
+
+    // flip at 90 degrees
+    fn turn_right_90(&self) -> Heading {
+        match self {
+            Heading::N => Heading::E,
+            Heading::NE => Heading::SE,
+            Heading::E => Heading::S,
+            Heading::SE => Heading::SW,
+            Heading::S => Heading::W,
+            Heading::SW => Heading::NW,
+            Heading::W => Heading::N,
+            Heading::NW => Heading::NE,
+        }
+    }
+
+    // flip the direction
+    fn flip(&self) -> Heading {
+        match self {
+            Heading::N => Heading::S,
+            Heading::NE => Heading::SW,
+            Heading::E => Heading::W,
+            Heading::SE => Heading::NW,
+            Heading::S => Heading::N,
+            Heading::SW => Heading::NE,
+            Heading::W => Heading::E,
+            Heading::NW => Heading::SE,
+        }
     }
 
     fn direction(&self) -> Point {
@@ -182,8 +244,17 @@ pub fn part1(input: &str) -> usize {
 }
 
 pub fn part2(input: &str) -> usize {
-    // TODO: implement
-    0
+    let (r, m) = parse::input_matrix(input).expect("Parsing is ok");
+    assert_eq!(r, "");
+
+    // find all that match XMAS
+    let mut count = 0;
+    for start_pos in m.points() {
+        if m.is_xmas_at(&start_pos) {
+            count += 1;
+        }
+    }
+    count
 }
 
 #[cfg(test)]
