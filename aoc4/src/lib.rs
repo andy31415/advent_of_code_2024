@@ -13,13 +13,13 @@ struct Point {
 }
 
 #[derive(Debug)]
-struct CharsIterator<'a, D: Direction> {
+struct CharsIterator<'a> {
     matrix: &'a Matrix,
     current: Point,
-    direction: &'a D,
+    direction: &'a Heading,
 }
 
-impl<D: Direction + Debug> Iterator for CharsIterator<'_, D> {
+impl Iterator for CharsIterator<'_> {
     type Item = char;
 
     #[instrument(ret)]
@@ -86,18 +86,13 @@ impl<'a> Matrix {
         PointsIterator::new(self)
     }
 
-    fn chars_at<D: Direction>(&'a self, p: Point, d: &'a D) -> CharsIterator<'a, D> {
+    fn chars_at(&'a self, p: Point, d: &'a Heading) -> CharsIterator<'a> {
         CharsIterator {
             matrix: self,
             current: p,
             direction: d,
         }
     }
-}
-
-/// A direction from a point
-trait Direction {
-    fn direction(&self) -> Point;
 }
 
 impl Add for Point {
@@ -136,9 +131,7 @@ impl Heading {
             Heading::NW,
         ]
     }
-}
 
-impl Direction for Heading {
     fn direction(&self) -> Point {
         match self {
             Heading::N => Point { x: 0, y: -1 },
@@ -232,6 +225,6 @@ mod tests {
 
     #[test]
     fn test_part2() {
-        assert_eq!(part2(include_str!("../example.txt")), 0);
+        assert_eq!(part2(include_str!("../example.txt")), 9);
     }
 }
