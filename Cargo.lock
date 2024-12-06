@@ -134,6 +134,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "aoc5"
+version = "0.1.0"
+dependencies = [
+ "dhat",
+ "divan",
+ "itertools",
+ "nom",
+ "nom-supreme",
+ "test-log",
+ "tracing",
+ "tracing-subscriber",
+ "tracing-test",
+]
+
+[[package]]
 name = "arrayvec"
 version = "0.7.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
