@@ -75,6 +75,32 @@ pub fn is_priority_respected(data: &[u32], before_to_after: &HashMap<u32, HashSe
     true
 }
 
+fn fix_priority(data: &[u32], before_to_after: &HashMap<u32, HashSet<u32>>) -> Vec<u32> {
+    // For every entry, place the entry just before anything that already is supposed to be in
+    // front of it
+    let mut result = Vec::new();
+    let mut seen = HashSet::new();
+    let empty_set = HashSet::new();
+
+    for v in data {
+        let must_be_before = before_to_after.get(v).unwrap_or(&empty_set);
+
+        let insert_pos = result
+            .iter()
+            .enumerate()
+            .find(|(_, value)| must_be_before.contains(value));
+
+        match insert_pos {
+            Some((idx, _)) => result.insert(idx, *v),
+            None => result.push(*v),
+        }
+
+        seen.insert(*v);
+    }
+
+    result
+}
+
 pub fn part1(input: &str) -> u32 {
     let (r, input) = parse::parse(input).expect("valid input");
     assert!(r.is_empty());
@@ -95,9 +121,25 @@ pub fn part1(input: &str) -> u32 {
         .sum()
 }
 
-pub fn part2(_input: &str) -> usize {
-    // TODO: implement
-    0
+pub fn part2(input: &str) -> u32 {
+    let (r, input) = parse::parse(input).expect("valid input");
+    assert!(r.is_empty());
+
+    let mut before_to_after = HashMap::new();
+    for o in input.ordering {
+        before_to_after
+            .entry(o.before)
+            .or_insert_with(HashSet::new)
+            .insert(o.after);
+    }
+
+    input
+        .lines
+        .iter()
+        .filter(|v| !is_priority_respected(v, &before_to_after))
+        .map(|v| fix_priority(v, &before_to_after))
+        .map(|v| MidValued::mid_value(&v))
+        .sum()
 }
 
 #[cfg(test)]
@@ -119,6 +161,6 @@ mod tests {
 
     #[test]
     fn test_part2() {
-        assert_eq!(part2(include_str!("../example.txt")), 0);
+        assert_eq!(part2(include_str!("../example.txt")), 123);
     }
 }
