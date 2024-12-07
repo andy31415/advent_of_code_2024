@@ -1,5 +1,7 @@
 use std::collections::HashSet;
 
+use nom::sequence::Tuple;
+
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord)]
 struct Equation {
     target: u64,
@@ -81,6 +83,18 @@ fn divide(target: u64, x: u64) -> Option<u64> {
     Some(target / x)
 }
 
+fn remove_suffix(target: u64, x: u64) -> Option<u64> {
+    let mut ts = target.to_string();
+    let xs = x.to_string();
+
+    if !ts.ends_with(&xs) || ts.len() <= xs.len() {
+        return None;
+    }
+
+    ts.truncate(ts.len() - xs.len());
+    Some(ts.parse().expect("valid number"))
+}
+
 pub fn part1(input: &str) -> u64 {
     let (r, equations) = parse::equations(input).expect("valid input");
     assert!(r.is_empty());
@@ -98,8 +112,20 @@ pub fn part1(input: &str) -> u64 {
 }
 
 pub fn part2(input: &str) -> u64 {
-    // TODO: implement
-    0
+    let (r, equations) = parse::equations(input).expect("valid input");
+    assert!(r.is_empty());
+
+    equations
+        .iter()
+        .filter(|e| {
+            e.solvable_by(&[
+                &(substract as fn(u64, u64) -> Option<u64>),
+                &(divide as fn(u64, u64) -> Option<u64>),
+                &(remove_suffix as fn(u64, u64) -> Option<u64>),
+            ])
+        })
+        .map(|e| e.target)
+        .sum()
 }
 
 #[cfg(test)]
@@ -113,6 +139,6 @@ mod tests {
 
     #[test]
     fn test_part2() {
-        assert_eq!(part2(include_str!("../example.txt")), 0);
+        assert_eq!(part2(include_str!("../example.txt")), 11387);
     }
 }
