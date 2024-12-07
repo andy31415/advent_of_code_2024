@@ -1,7 +1,4 @@
-use std::{
-    collections::{HashMap, HashSet},
-    ops::Add,
-};
+use std::{collections::HashSet, ops::Add};
 
 #[derive(Debug, PartialEq, Eq, PartialOrd, Hash, Copy, Clone)]
 enum Heading {
@@ -92,7 +89,7 @@ mod parse {
     use nom::{
         character::complete::{line_ending, one_of},
         combinator::opt,
-        multi::{fold_many0, fold_many1, many0},
+        multi::{fold_many0, fold_many1},
         IResult, Parser,
     };
     use nom_supreme::ParserExt;
