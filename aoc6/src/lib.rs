@@ -214,14 +214,14 @@ pub fn find_size(lab: &Lab) -> (HashSet<Point>, bool) {
             // we have to turn because otherwise we hit a wall
             position.1 = position.1.turn_right();
 
-            tracing::info!("PATH SO FAR:\n{}", display_path(&lab, &visited));
+            tracing::info!("PATH SO FAR:\n{}", display_path(lab, &visited));
         } else {
             tracing::info!("  Can move");
             position.0 = next; // move, keeping the same heading
         }
     }
     // stuck in a loop
-    return (visited, true);
+    (visited, true)
 }
 
 pub fn part1(input: &str) -> usize {
@@ -237,8 +237,6 @@ pub fn part2(input: &str) -> usize {
 
     let (initial_visisted, _) = find_size(&lab);
 
-    let mut loops = 0;
-
     // try to place an obstacle in all visisted places and see if we go into some loop.
     // Obstacle only makes sense in visisted (otherwise we do not block any path really)
     initial_visisted
@@ -253,9 +251,9 @@ pub fn part2(input: &str) -> usize {
 
             // check if now we loop
             if let (_, true) = find_size(&changed_lab) {
-                return 1;
+                1
             } else {
-                return 0;
+                0
             }
         })
         .sum()
