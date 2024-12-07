@@ -23,16 +23,9 @@ impl Equation {
                     h
                 },
                 |h, item| {
-                    let mut new_targets = HashSet::new();
-
-                    for x in h.iter() {
-                        for c in conversions {
-                            if let Some(value) = c(*x, *item) {
-                                new_targets.insert(value);
-                            }
-                        }
-                    }
-                    new_targets
+                    h.iter()
+                        .flat_map(|x| conversions.iter().filter_map(|c| c(*x, *item)))
+                        .collect()
                 },
             )
             .contains(self.parts.first().expect("has at least one item"))
