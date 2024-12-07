@@ -1,5 +1,9 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    ops::Add,
+};
 
+#[derive(Debug, PartialEq, Eq, PartialOrd, Hash, Copy, Clone)]
 enum Heading {
     N,
     E,
@@ -7,12 +11,81 @@ enum Heading {
     W,
 }
 
+#[derive(Debug, PartialEq, Eq, PartialOrd, Hash, Copy, Clone)]
+struct Point {
+    row: i32,
+    col: i32,
+}
+
+impl Add for Point {
+    type Output = Point;
+
+    fn add(self, rhs: Self) -> Self::Output {
+        Point {
+            row: self.row + rhs.row,
+            col: self.col + rhs.col,
+        }
+    }
+}
+
+impl From<Point> for (i32, i32) {
+    fn from(value: Point) -> Self {
+        (value.row, value.col)
+    }
+}
+
+impl From<(i32, i32)> for Point {
+    fn from(value: (i32, i32)) -> Self {
+        Self {
+            row: value.0,
+            col: value.1,
+        }
+    }
+}
+
+impl Add<(i32, i32)> for Point {
+    type Output = Point;
+
+    fn add(self, rhs: (i32, i32)) -> Self::Output {
+        Point {
+            row: self.row + rhs.0,
+            col: self.col + rhs.1,
+        }
+    }
+}
+
+impl Heading {
+    fn direction(&self) -> (i32, i32) {
+        match self {
+            Heading::N => (-1, 0),
+            Heading::E => (0, 1),
+            Heading::S => (1, 0),
+            Heading::W => (0, -1),
+        }
+    }
+
+    fn turn_right(&self) -> Self {
+        match self {
+            Heading::N => Heading::E,
+            Heading::E => Heading::S,
+            Heading::S => Heading::W,
+            Heading::W => Heading::N,
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Default)]
 struct Lab {
-    walls: HashSet<(u32, u32)>, // (row,column) where a `#` exists
-    rows: u32,
-    cols: u32,
-    start: (u32, u32),
+    walls: HashSet<(i32, i32)>, // (row,column) where a `#` exists
+    rows: i32,
+    cols: i32,
+    start: (i32, i32),
+}
+
+impl Lab {
+    fn contains(&self, pos: (i32, i32)) -> bool {
+        (pos.0 >= 0) && (pos.0 < self.rows) && (pos.1 >= 0) && (pos.1 < self.cols)
+    }
 }
 
 mod parse {
@@ -28,13 +101,13 @@ mod parse {
 
     #[derive(Debug, PartialEq, Eq, Default)]
     pub(crate) struct ParsedRow {
-        length: u32,        // full row length
-        walls: Vec<u32>,    // where walls are located
-        start: Option<u32>, // where ^ is located
+        length: i32,        // full row length
+        walls: Vec<i32>,    // where walls are located
+        start: Option<i32>, // where ^ is located
     }
 
     impl ParsedRow {
-        pub(crate) fn new<W: Into<Vec<u32>>>(length: u32, walls: W, start: Option<u32>) -> Self {
+        pub(crate) fn new<W: Into<Vec<i32>>>(length: i32, walls: W, start: Option<i32>) -> Self {
             Self {
                 length,
                 walls: walls.into(),
@@ -92,9 +165,65 @@ mod parse {
     }
 }
 
+fn display_path(lab: &Lab, visited: &HashSet<Point>) -> String {
+    let mut s = String::new();
+    s.reserve((lab.rows * (lab.cols + 1)) as usize);
+
+    for r in 0..lab.rows {
+        for c in 0..lab.cols {
+            if lab.walls.contains(&(r, c)) {
+                s.push('#');
+            } else if visited.contains(&(r, c).into()) {
+                s.push('X');
+            } else {
+                s.push('.');
+            }
+        }
+        s.push('\n');
+    }
+
+    s
+}
+
 pub fn part1(input: &str) -> usize {
-    // TODO: implement
-    0
+    let (r, lab) = parse::input(input).expect("valid input");
+    assert!(r.is_empty()); // fully parse input
+
+    // '^' means heading north
+    let mut position: (Point, Heading) = (lab.start.into(), Heading::N);
+
+    let mut visited = HashSet::new();
+    let mut positions = HashSet::new();
+
+    tracing::info!("LAB {:#?}", lab);
+
+    while !positions.contains(&position) {
+        tracing::info!("at {:?}", position);
+        positions.insert(position);
+        visited.insert(position.0);
+
+        let next = position.0 + position.1.direction();
+        tracing::info!("  Trying to move to {:?}", next);
+        if !lab.contains(next.into()) {
+            tracing::info!("  Exiting lab");
+            // tracing::info!("PATH SO FAR:\n{}", display_path(&lab, &visited));
+            // moved outside the lab
+            break;
+        }
+
+        // position is in the lab ... are we hitting anything?
+        if lab.walls.contains(&next.into()) {
+            tracing::info!("  Would hit a wall, so turn right");
+            // we have to turn because otherwise we hit a wall
+            position.1 = position.1.turn_right();
+
+            tracing::info!("PATH SO FAR:\n{}", display_path(&lab, &visited));
+        } else {
+            tracing::info!("  Can move");
+            position.0 = next; // move, keeping the same heading
+        }
+    }
+    visited.len()
 }
 
 pub fn part2(input: &str) -> usize {
@@ -168,6 +297,7 @@ mod tests {
     }
 
     #[test]
+    #[tracing_test::traced_test]
     fn test_part1() {
         assert_eq!(part1(include_str!("../example.txt")), 41);
     }
