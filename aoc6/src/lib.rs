@@ -116,7 +116,7 @@ mod parse {
     }
 
     /// Returns the length of the row plus all the positions
-    #[tracing::instrument]
+    // #[tracing::instrument]
     pub(crate) fn row(s: &str) -> IResult<&str, ParsedRow> {
         fold_many1(
             one_of(".#^"),
@@ -192,17 +192,17 @@ pub fn find_size(lab: &Lab) -> (HashSet<Point>, bool) {
     let mut visited = HashSet::new();
     let mut positions = HashSet::new();
 
-    tracing::info!("LAB {:#?}", lab);
+    // tracing::info!("LAB {:#?}", lab);
 
     while !positions.contains(&position) {
-        tracing::info!("at {:?}", position);
+        // tracing::info!("at {:?}", position);
         positions.insert(position);
         visited.insert(position.0);
 
         let next = position.0 + position.1.direction();
-        tracing::info!("  Trying to move to {:?}", next);
+        // tracing::info!("  Trying to move to {:?}", next);
         if !lab.contains(next.into()) {
-            tracing::info!("  Exiting lab");
+            // tracing::info!("  Exiting lab");
             // tracing::info!("PATH SO FAR:\n{}", display_path(&lab, &visited));
             // moved outside the lab
             return (visited, false);
@@ -210,13 +210,13 @@ pub fn find_size(lab: &Lab) -> (HashSet<Point>, bool) {
 
         // position is in the lab ... are we hitting anything?
         if lab.walls.contains(&next.into()) {
-            tracing::info!("  Would hit a wall, so turn right");
+            // tracing::info!("  Would hit a wall, so turn right");
             // we have to turn because otherwise we hit a wall
             position.1 = position.1.turn_right();
 
-            tracing::info!("PATH SO FAR:\n{}", display_path(lab, &visited));
+            // tracing::info!("PATH SO FAR:\n{}", display_path(lab, &visited));
         } else {
-            tracing::info!("  Can move");
+            // tracing::info!("  Can move");
             position.0 = next; // move, keeping the same heading
         }
     }
