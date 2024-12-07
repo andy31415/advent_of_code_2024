@@ -7,7 +7,7 @@ struct Equation {
 }
 
 impl Equation {
-    fn solvable_by_add_mult(&self) -> bool {
+    fn solvable_by<C: Fn(u64, u64) -> Option<u64>>(&self, conversions: &[&C]) -> bool {
         let mut choices = HashSet::new();
 
         choices.insert(self.target);
@@ -26,11 +26,10 @@ impl Equation {
                     let mut new_targets = HashSet::new();
 
                     for x in h.iter() {
-                        if x >= item {
-                            new_targets.insert(x - item);
-                        }
-                        if x % item == 0 {
-                            new_targets.insert(x / item);
+                        for c in conversions {
+                            if let Some(value) = c(*x, *item) {
+                                new_targets.insert(value);
+                            }
                         }
                     }
                     new_targets
@@ -68,13 +67,32 @@ mod parse {
     }
 }
 
+fn substract(target: u64, x: u64) -> Option<u64> {
+    if target < x {
+        return None;
+    }
+    Some(target - x)
+}
+
+fn divide(target: u64, x: u64) -> Option<u64> {
+    if target % x != 0 {
+        return None;
+    }
+    Some(target / x)
+}
+
 pub fn part1(input: &str) -> u64 {
     let (r, equations) = parse::equations(input).expect("valid input");
     assert!(r.is_empty());
 
     equations
         .iter()
-        .filter(|e| Equation::solvable_by_add_mult(e))
+        .filter(|e| {
+            e.solvable_by(&[
+                &(substract as fn(u64, u64) -> Option<u64>),
+                &(divide as fn(u64, u64) -> Option<u64>),
+            ])
+        })
         .map(|e| e.target)
         .sum()
 }
