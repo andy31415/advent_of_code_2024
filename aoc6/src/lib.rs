@@ -71,7 +71,7 @@ impl Heading {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Default)]
+#[derive(Debug, PartialEq, Eq, Default, Clone)]
 struct Lab {
     walls: HashSet<(i32, i32)>, // (row,column) where a `#` exists
     rows: i32,
@@ -182,10 +182,8 @@ fn display_path(lab: &Lab, visited: &HashSet<Point>) -> String {
     s
 }
 
-pub fn part1(input: &str) -> usize {
-    let (r, lab) = parse::input(input).expect("valid input");
-    assert!(r.is_empty()); // fully parse input
-
+// hahsset: what was visited, bool: stuck in a loop or not
+pub fn find_size(lab: &Lab) -> (HashSet<Point>, bool) {
     // '^' means heading north
     let mut position: (Point, Heading) = (lab.start.into(), Heading::N);
 
@@ -205,7 +203,7 @@ pub fn part1(input: &str) -> usize {
             tracing::info!("  Exiting lab");
             // tracing::info!("PATH SO FAR:\n{}", display_path(&lab, &visited));
             // moved outside the lab
-            break;
+            return (visited, false);
         }
 
         // position is in the lab ... are we hitting anything?
@@ -220,12 +218,42 @@ pub fn part1(input: &str) -> usize {
             position.0 = next; // move, keeping the same heading
         }
     }
+    // stuck in a loop
+    return (visited, true);
+}
+
+pub fn part1(input: &str) -> usize {
+    let (r, lab) = parse::input(input).expect("valid input");
+    assert!(r.is_empty());
+    let (visited, _) = find_size(&lab);
     visited.len()
 }
 
 pub fn part2(input: &str) -> usize {
-    // TODO: implement
-    0
+    let (r, lab) = parse::input(input).expect("valid input");
+    assert!(r.is_empty());
+
+    let (initial_visisted, _) = find_size(&lab);
+
+    let mut loops = 0;
+
+    // try to place an obstacle in all visisted places and see if we go into some loop.
+    // Obstacle only makes sense in visisted (otherwise we do not block any path really)
+    for option in initial_visisted.iter() {
+        if option == &lab.start.into() {
+            continue; // cannot place exactly at start
+        }
+
+        let mut changed_lab = lab.clone();
+        changed_lab.walls.insert((*option).into());
+
+        // check if now we loop
+        if let (_, true) = find_size(&changed_lab) {
+            loops += 1;
+        }
+    }
+
+    loops
 }
 
 #[cfg(test)]
@@ -301,6 +329,6 @@ mod tests {
 
     #[test]
     fn test_part2() {
-        assert_eq!(part2(include_str!("../example.txt")), 0);
+        assert_eq!(part2(include_str!("../example.txt")), 6);
     }
 }
