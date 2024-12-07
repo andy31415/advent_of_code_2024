@@ -185,7 +185,7 @@ fn display_path(lab: &Lab, visited: &HashSet<Point>) -> String {
 }
 
 // hahsset: what was visited, bool: stuck in a loop or not
-pub fn find_size(lab: &Lab) -> (HashSet<Point>, bool) {
+pub(crate) fn find_size(lab: &Lab) -> (HashSet<Point>, bool) {
     // '^' means heading north
     let mut position: (Point, Heading) = (lab.start.into(), Heading::N);
 
