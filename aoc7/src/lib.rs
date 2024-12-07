@@ -1,7 +1,5 @@
 use std::collections::HashSet;
 
-use nom::sequence::Tuple;
-
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord)]
 struct Equation {
     target: u64,
