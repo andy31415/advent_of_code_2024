@@ -1,3 +1,4 @@
+use rayon::prelude::*;
 use std::collections::HashSet;
 
 #[derive(Debug, PartialEq, PartialOrd, Eq, Ord)]
@@ -91,7 +92,7 @@ pub fn part1(input: &str) -> u64 {
     assert!(r.is_empty());
 
     equations
-        .iter()
+        .par_iter()
         .filter(|e| {
             e.solvable_by(&[
                 &(substract as fn(u64, u64) -> Option<u64>),
@@ -107,7 +108,7 @@ pub fn part2(input: &str) -> u64 {
     assert!(r.is_empty());
 
     equations
-        .iter()
+        .par_iter()
         .filter(|e| {
             e.solvable_by(&[
                 &(substract as fn(u64, u64) -> Option<u64>),
