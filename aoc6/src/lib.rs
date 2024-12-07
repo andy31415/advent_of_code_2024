@@ -1,5 +1,7 @@
 use std::{collections::HashSet, ops::Add};
 
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
+
 #[derive(Debug, PartialEq, Eq, PartialOrd, Hash, Copy, Clone)]
 enum Heading {
     N,
@@ -239,21 +241,24 @@ pub fn part2(input: &str) -> usize {
 
     // try to place an obstacle in all visisted places and see if we go into some loop.
     // Obstacle only makes sense in visisted (otherwise we do not block any path really)
-    for option in initial_visisted.iter() {
-        if option == &lab.start.into() {
-            continue; // cannot place exactly at start
-        }
+    initial_visisted
+        .par_iter()
+        .map(|point| {
+            if point == &lab.start.into() {
+                return 0;
+            }
 
-        let mut changed_lab = lab.clone();
-        changed_lab.walls.insert((*option).into());
+            let mut changed_lab = lab.clone();
+            changed_lab.walls.insert((*point).into());
 
-        // check if now we loop
-        if let (_, true) = find_size(&changed_lab) {
-            loops += 1;
-        }
-    }
-
-    loops
+            // check if now we loop
+            if let (_, true) = find_size(&changed_lab) {
+                return 1;
+            } else {
+                return 0;
+            }
+        })
+        .sum()
 }
 
 #[cfg(test)]

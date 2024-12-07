@@ -27,6 +27,7 @@ nom-supreme.workspace = true
 itertools.workspace = true
 test-log.workspace = true
 tracing-test = "0.2.5"
+rayon.workspace = true
 
 [dev-dependencies]
 itertools = { workspace = true }
