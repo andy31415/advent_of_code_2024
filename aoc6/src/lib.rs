@@ -1,16 +1,25 @@
 use std::collections::{HashMap, HashSet};
 
+enum Heading {
+    N,
+    E,
+    S,
+    W,
+}
+
+#[derive(Debug, PartialEq, Eq, Default)]
 struct Lab {
     walls: HashSet<(u32, u32)>, // (row,column) where a `#` exists
     rows: u32,
     cols: u32,
+    start: (u32, u32),
 }
 
 mod parse {
     use nom::{
         character::complete::{line_ending, one_of},
         combinator::opt,
-        multi::{fold_many0, many0},
+        multi::{fold_many0, fold_many1, many0},
         IResult, Parser,
     };
     use nom_supreme::ParserExt;
@@ -35,8 +44,9 @@ mod parse {
     }
 
     /// Returns the length of the row plus all the positions
+    #[tracing::instrument]
     pub(crate) fn row(s: &str) -> IResult<&str, ParsedRow> {
-        fold_many0(
+        fold_many1(
             one_of(".#^"),
             ParsedRow::default,
             |mut row: ParsedRow, item| {
@@ -57,7 +67,28 @@ mod parse {
     }
 
     pub(crate) fn input(s: &str) -> IResult<&str, Lab> {
-        todo!()
+        fold_many0(row, Lab::default, |mut lab: Lab, row| {
+            let y = lab.rows;
+
+            if lab.cols == 0 {
+                lab.cols = row.length;
+            } else {
+                assert_eq!(lab.cols, row.length);
+            }
+
+            if let Some(start_x) = row.start {
+                assert_eq!(lab.start, (0, 0));
+                lab.start = (y, start_x);
+            }
+
+            // add all walls
+            for x in row.walls {
+                lab.walls.insert((y, x));
+            }
+            lab.rows += 1;
+            lab
+        })
+        .parse(s)
     }
 }
 
@@ -120,6 +151,19 @@ mod tests {
         assert_eq!(
             row("..^").expect("valid input").1,
             ParsedRow::new(3, [], Some(2))
+        );
+    }
+
+    #[test]
+    fn test_input() {
+        assert_eq!(
+            input("#.#\n..#\n^..\n...").expect("valid input").1,
+            Lab {
+                cols: 3,
+                rows: 4,
+                walls: [(0, 0), (0, 2), (1, 2)].into(),
+                start: (2, 0)
+            }
         );
     }
 
