@@ -114,8 +114,7 @@ pub fn part2(input: &str) -> usize {
     let (r, map) = parsing::map(input).expect("valid input");
     assert!(r.is_empty());
 
-    let antinodes = map
-        .antennas
+    map.antennas
         .iter()
         .flat_map(|(_, positions)| {
             // have to combine every position with every other position.
@@ -148,23 +147,8 @@ pub fn part2(input: &str) -> usize {
                 results
             })
         })
-        .collect::<HashSet<_>>();
-
-    tracing::info!("ANTENNA:");
-    for y in 0..map.cols {
-        let mut line = String::with_capacity(map.rows as usize);
-        for x in 0..map.rows {
-            let p = IVec2::new(x, y);
-            if antinodes.contains(&p) {
-                line.push('#');
-            } else {
-                line.push('.');
-            }
-        }
-        tracing::info!("    {}", line);
-    }
-
-    antinodes.len()
+        .collect::<HashSet<_>>()
+        .len()
 }
 
 #[cfg(test)]
