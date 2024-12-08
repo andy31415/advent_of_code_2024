@@ -109,41 +109,38 @@ pub fn part2(input: &str) -> usize {
     let (r, map) = parsing::map(input).expect("valid input");
     assert!(r.is_empty());
 
-    map.antennas
-        .iter()
-        .flat_map(|(_, positions)| {
-            // have to combine every position with every other position.
-            positions.iter().combinations(2).flat_map(|c| {
-                let p1 = c.first().expect("2 elements");
-                let p2 = c.get(1).expect("2 elements");
-                if p1 == p2 {
-                    return vec![]; // nothing, all is empty
-                }
-                let mut results = Vec::new();
+    let mut antinodes = HashSet::new();
 
-                let d = *p1 - *p2;
-                let mut p = *p1 + d;
-                while map.contains(p) {
-                    results.push(p);
-                    p += d;
-                }
+    map.antennas.iter().for_each(|(_, positions)| {
+        // have to combine every position with every other position.
+        positions.iter().combinations(2).for_each(|c| {
+            let p1 = **c.first().expect("2 elements");
+            let p2 = **c.get(1).expect("2 elements");
+            if p1 == p2 {
+                return;
+            }
 
-                let d = *p2 - *p1;
-                let mut p = *p2 + d;
-                while map.contains(p) {
-                    results.push(p);
-                    p += d;
-                }
+            let d = p1 - p2;
+            let mut p = p1 + d;
+            while map.contains(p) {
+                antinodes.insert(p);
+                p += d;
+            }
 
-                // also add one on the antenna
-                results.push(**p1);
-                results.push(**p2);
+            let d = p2 - p1;
+            let mut p = p2 + d;
+            while map.contains(p) {
+                antinodes.insert(p);
+                p += d;
+            }
 
-                results
-            })
+            // also add one on the antenna
+            antinodes.insert(p1);
+            antinodes.insert(p2);
         })
-        .collect::<HashSet<_>>()
-        .len()
+    });
+
+    antinodes.len()
 }
 
 #[cfg(test)]
