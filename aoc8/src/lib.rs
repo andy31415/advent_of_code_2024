@@ -80,23 +80,29 @@ pub fn part1(input: &str) -> usize {
     let (r, map) = parsing::map(input).expect("valid input");
     assert!(r.is_empty());
 
-    map.antennas
-        .iter()
-        .flat_map(|(_, positions)| {
-            // have to combine every position with every other position.
-            positions.iter().combinations(2).flat_map(|c| {
-                let p1 = c.first().expect("2 elements");
-                let p2 = c.get(1).expect("2 elements");
-                if p1 == p2 {
-                    return vec![];
-                }
+    let mut antinodes = HashSet::new();
 
-                vec![*p1 + *p1 - *p2, *p2 + *p2 - *p1]
-            })
-        })
-        .filter(|p| map.contains(*p))
-        .collect::<HashSet<_>>()
-        .len()
+    map.antennas.iter().for_each(|(_, positions)| {
+        // have to combine every position with every other position.
+        positions.iter().combinations(2).for_each(|c| {
+            let p1 = c.first().expect("2 elements");
+            let p2 = c.get(1).expect("2 elements");
+            if p1 == p2 {
+                return;
+            }
+            let p = *p1 + *p1 - *p2;
+            if map.contains(p) {
+                antinodes.insert(p);
+            }
+
+            let p = *p2 + *p2 - *p1;
+            if map.contains(p) {
+                antinodes.insert(p);
+            }
+        });
+    });
+
+    antinodes.len()
 }
 
 pub fn part2(input: &str) -> usize {
