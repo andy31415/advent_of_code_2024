@@ -80,8 +80,6 @@ pub fn part1(input: &str) -> usize {
     let (r, map) = parsing::map(input).expect("valid input");
     assert!(r.is_empty());
 
-    tracing::info!("MAP: {:#?}", map);
-
     map.antennas
         .iter()
         .flat_map(|(_, positions)| {
@@ -113,8 +111,60 @@ pub fn part1(input: &str) -> usize {
 }
 
 pub fn part2(input: &str) -> usize {
-    // TODO: implement
-    0
+    let (r, map) = parsing::map(input).expect("valid input");
+    assert!(r.is_empty());
+
+    let antinodes = map
+        .antennas
+        .iter()
+        .flat_map(|(_, positions)| {
+            // have to combine every position with every other position.
+            positions.iter().combinations(2).flat_map(|c| {
+                let p1 = c.first().expect("2 elements");
+                let p2 = c.get(1).expect("2 elements");
+                if p1 == p2 {
+                    return vec![]; // nothing, all is empty
+                }
+                let mut results = Vec::new();
+
+                let d = *p1 - *p2;
+                let mut p = *p1 + d;
+                while map.contains(p) {
+                    results.push(p);
+                    p += d;
+                }
+
+                let d = *p2 - *p1;
+                let mut p = *p2 + d;
+                while map.contains(p) {
+                    results.push(p);
+                    p += d;
+                }
+
+                // also add one on the antenna
+                results.push(**p1);
+                results.push(**p2);
+
+                results
+            })
+        })
+        .collect::<HashSet<_>>();
+
+    tracing::info!("ANTENNA:");
+    for y in 0..map.cols {
+        let mut line = String::with_capacity(map.rows as usize);
+        for x in 0..map.rows {
+            let p = IVec2::new(x, y);
+            if antinodes.contains(&p) {
+                line.push('#');
+            } else {
+                line.push('.');
+            }
+        }
+        tracing::info!("    {}", line);
+    }
+
+    antinodes.len()
 }
 
 #[cfg(test)]
@@ -128,7 +178,8 @@ mod tests {
     }
 
     #[test]
+    #[tracing_test::traced_test]
     fn test_part2() {
-        assert_eq!(part2(include_str!("../example.txt")), 0);
+        assert_eq!(part2(include_str!("../example.txt")), 34);
     }
 }
