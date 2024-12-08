@@ -1,0 +1,31 @@
+[package]
+name = "aoc8"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "aoc8"
+path = "src/aoc8.rs"
+
+[[bench]]
+name = "aoc8"
+path = "benches/aoc8.rs"
+harness = false
+
+[features]
+dhat-heap = []
+
+[dependencies]
+divan = { workspace = true }
+dhat = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+nom.workspace = true
+nom-supreme.workspace = true
+itertools.workspace = true
+test-log.workspace = true
+
+[dev-dependencies]
+itertools = { workspace = true }
