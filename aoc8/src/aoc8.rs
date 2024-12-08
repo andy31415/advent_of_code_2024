@@ -10,7 +10,7 @@ fn main() {
     let _profiler = dhat::Profiler::new_heap();
 
     let stdout_log = tracing_subscriber::fmt::layer().compact();
-    
+
     tracing_subscriber::registry()
         .with(stdout_log)
         .with(EnvFilter::from_default_env())
