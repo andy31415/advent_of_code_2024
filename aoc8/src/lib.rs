@@ -84,28 +84,17 @@ pub fn part1(input: &str) -> usize {
         .iter()
         .flat_map(|(_, positions)| {
             // have to combine every position with every other position.
-            positions
-                .iter()
-                .combinations(2)
-                .flat_map(|c| {
-                    let p1 = c.first().expect("2 elements");
-                    let p2 = c.get(1).expect("2 elements");
-                    if p1 == p2 {
-                        return [None, None];
-                    }
-
-                    [Some(*p1 + *p1 - *p2), Some(*p2 + *p2 - *p1)]
-                })
-                .filter(|v| v.is_some())
-        })
-        .flat_map(|p| {
-            if let Some(location) = p {
-                if map.contains(location) {
-                    return Some(location);
+            positions.iter().combinations(2).flat_map(|c| {
+                let p1 = c.first().expect("2 elements");
+                let p2 = c.get(1).expect("2 elements");
+                if p1 == p2 {
+                    return vec![];
                 }
-            }
-            None
+
+                vec![*p1 + *p1 - *p2, *p2 + *p2 - *p1]
+            })
         })
+        .filter(|p| map.contains(*p))
         .collect::<HashSet<_>>()
         .len()
 }
