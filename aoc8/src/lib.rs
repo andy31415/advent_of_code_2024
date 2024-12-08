@@ -120,15 +120,16 @@ pub fn part2(input: &str) -> usize {
             }
 
             let d = p1 - p2;
-            antinodes.extend(successors(Some(*p1), |v| {
-                let p = *v + d;
-                map.contains(p).then_some(p)
-            }));
-
-            antinodes.extend(successors(Some(*p2), |v| {
-                let p = *v - d;
-                map.contains(p).then_some(p)
-            }));
+            antinodes.extend(
+                successors(Some(*p1), |v| {
+                    let p = *v + d;
+                    map.contains(p).then_some(p)
+                })
+                .chain(successors(Some(*p2), |v| {
+                    let p = *v - d;
+                    map.contains(p).then_some(p)
+                })),
+            );
         })
     });
 
