@@ -1,6 +1,9 @@
 use glam::IVec2;
 use itertools::Itertools;
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    iter::successors,
+};
 
 #[derive(Default, Debug)]
 struct Map {
@@ -117,22 +120,15 @@ pub fn part2(input: &str) -> usize {
             }
 
             let d = p1 - p2;
-            let mut p = p1 + d;
-            while map.contains(p) {
-                antinodes.insert(p);
-                p += d;
-            }
+            antinodes.extend(successors(Some(*p1), |v| {
+                let p = *v + d;
+                map.contains(p).then_some(p)
+            }));
 
-            let d = p2 - p1;
-            let mut p = p2 + d;
-            while map.contains(p) {
-                antinodes.insert(p);
-                p += d;
-            }
-
-            // also add one on the antenna
-            antinodes.insert(*p1);
-            antinodes.insert(*p2);
+            antinodes.extend(successors(Some(*p2), |v| {
+                let p = *v - d;
+                map.contains(p).then_some(p)
+            }));
         })
     });
 
