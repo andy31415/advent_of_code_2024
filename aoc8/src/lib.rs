@@ -24,8 +24,7 @@ pub mod parsing {
     use crate::Map;
     use glam::IVec2;
     use nom::{
-        branch::alt,
-        character::complete::{self, line_ending, none_of},
+        character::complete::{line_ending, none_of},
         multi::many1,
         IResult, Parser,
     };
@@ -91,7 +90,7 @@ pub fn part1(input: &str) -> usize {
                 .iter()
                 .combinations(2)
                 .flat_map(|c| {
-                    let p1 = c.get(0).expect("2 elements");
+                    let p1 = c.first().expect("2 elements");
                     let p2 = c.get(1).expect("2 elements");
                     if p1 == p2 {
                         return [None, None];
