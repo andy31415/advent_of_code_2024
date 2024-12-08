@@ -84,9 +84,7 @@ pub fn part1(input: &str) -> usize {
 
     map.antennas.iter().for_each(|(_, positions)| {
         // have to combine every position with every other position.
-        positions.iter().combinations(2).for_each(|c| {
-            let p1 = c.first().expect("2 elements");
-            let p2 = c.get(1).expect("2 elements");
+        positions.iter().tuple_combinations().for_each(|(p1, p2)| {
             if p1 == p2 {
                 return;
             }
@@ -113,9 +111,7 @@ pub fn part2(input: &str) -> usize {
 
     map.antennas.iter().for_each(|(_, positions)| {
         // have to combine every position with every other position.
-        positions.iter().combinations(2).for_each(|c| {
-            let p1 = **c.first().expect("2 elements");
-            let p2 = **c.get(1).expect("2 elements");
+        positions.iter().tuple_combinations().for_each(|(p1, p2)| {
             if p1 == p2 {
                 return;
             }
@@ -135,8 +131,8 @@ pub fn part2(input: &str) -> usize {
             }
 
             // also add one on the antenna
-            antinodes.insert(p1);
-            antinodes.insert(p2);
+            antinodes.insert(*p1);
+            antinodes.insert(*p2);
         })
     });
 
