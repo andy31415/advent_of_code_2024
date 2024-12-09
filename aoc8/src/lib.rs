@@ -22,8 +22,6 @@ impl Map {
 }
 
 pub mod parsing {
-    use std::collections::HashSet;
-
     use crate::Map;
     use glam::IVec2;
     use nom::{
@@ -32,6 +30,7 @@ pub mod parsing {
         IResult, Parser,
     };
     use nom_supreme::ParserExt;
+    use std::collections::HashSet;
 
     /// find the antenna: gives a character id and the X position
     fn maybe_antenna(input: &str) -> IResult<&str, Option<char>> {
@@ -84,6 +83,8 @@ pub fn part1(input: &str) -> usize {
     assert!(r.is_empty());
 
     let mut antinodes = HashSet::new();
+
+    // find all possible combinations of antinotes
 
     map.antennas.iter().for_each(|(_, positions)| {
         // have to combine every position with every other position.

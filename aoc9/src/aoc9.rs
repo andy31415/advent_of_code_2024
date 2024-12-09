@@ -10,17 +10,15 @@ fn main() {
     let _profiler = dhat::Profiler::new_heap();
 
     let stdout_log = tracing_subscriber::fmt::layer().compact();
-
+    
     tracing_subscriber::registry()
         .with(stdout_log)
         .with(EnvFilter::from_default_env())
         .init();
 
-    let s1 = aoc8::part1(include_str!("../input.txt"));
+    let s1 = aoc9::part1(include_str!("../input.txt"));
     println!("Part 1: {}", s1);
 
-    let s2 = aoc8::part2(include_str!("../input.txt"));
+    let s2 = aoc9::part2(include_str!("../input.txt"));
     println!("Part 2: {}", s2);
 }
-
-/// Totally a test comment here
