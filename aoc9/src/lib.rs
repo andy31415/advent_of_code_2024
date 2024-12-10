@@ -92,10 +92,7 @@ impl FlatDisk {
 mod parsing {
     use crate::{DiskLocation, FlatDisk};
     use nom::{
-        character::{
-            complete::{multispace0, satisfy},
-            is_digit,
-        },
+        character::complete::{multispace0, satisfy},
         multi::many0,
         sequence::tuple,
         IResult, Parser,
@@ -103,13 +100,13 @@ mod parsing {
     use nom_supreme::ParserExt;
 
     fn occupied_disk(s: &str) -> IResult<&str, DiskLocation> {
-        satisfy(|c| c.is_digit(10))
+        satisfy(|c| c.is_ascii_digit())
             .map(|c| DiskLocation::File(c.to_digit(10).expect("valid digit") as usize))
             .parse(s)
     }
 
     fn free_disk(s: &str) -> IResult<&str, DiskLocation> {
-        satisfy(|c| c.is_digit(10))
+        satisfy(|c| c.is_ascii_digit())
             .map(|c| DiskLocation::Free(c.to_digit(10).expect("valid digit") as usize))
             .parse(s)
     }
