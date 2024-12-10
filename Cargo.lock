@@ -204,9 +204,11 @@ dependencies = [
  "itertools",
  "nom",
  "nom-supreme",
+ "rayon",
  "test-log",
  "tracing",
  "tracing-subscriber",
+ "tracing-test",
 ]
 
 [[package]]

@@ -22,5 +22,3 @@ fn main() {
     let s2 = aoc8::part2(include_str!("../input.txt"));
     println!("Part 2: {}", s2);
 }
-
-/// Totally a test comment here
