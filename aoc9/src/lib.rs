@@ -1,6 +1,6 @@
 use std::collections::VecDeque;
 
-use itertools::zip;
+use rayon::prelude::*;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum DiskLocation {
@@ -165,7 +165,8 @@ pub fn part1(input: &str) -> usize {
             .collect::<Vec<_>>()
     );
 
-    zip(0..d.allocated(), d.blocks())
+    (0..d.allocated())
+        .zip(d.blocks())
         .map(|(idx, b)| {
             idx * match b {
                 BlockType::Occupied => fwd.next().expect("has value"),
@@ -260,7 +261,7 @@ pub fn part2(input: &str) -> usize {
     }
 
     blocks
-        .iter()
+        .par_iter()
         .enumerate()
         .map(|(idx, b)| match b {
             BlockContent::File(n) => n * idx,
