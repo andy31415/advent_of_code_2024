@@ -235,7 +235,7 @@ pub fn part2(input: &str) -> usize {
 
         // find a free space of at least len items
         let mut free_pos = None;
-        for (idx, window) in (&blocks).windows(file_size).enumerate() {
+        for (idx, window) in blocks.windows(file_size).enumerate() {
             if window.iter().all(|b| *b == BlockContent::Free) {
                 tracing::info!("FOUND FREE");
                 free_pos = Some(idx);
