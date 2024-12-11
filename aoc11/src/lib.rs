@@ -110,6 +110,7 @@ mod tests {
 
     #[test]
     fn test_part2() {
-        assert_eq!(part2(include_str!("../example.txt")), 0);
+        // this was not given in the test, but we added it here based on passing test anyway
+        assert_eq!(part2(include_str!("../example.txt")), 65601038650482);
     }
 }
