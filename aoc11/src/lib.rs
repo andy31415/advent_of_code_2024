@@ -76,8 +76,12 @@ pub fn part1(input: &str) -> usize {
 }
 
 pub fn part2(input: &str) -> usize {
-    // TODO: implement
-    0
+    let (r, v) = parse_input(input).expect("valid input");
+    assert!(r.is_empty());
+
+    let mut cache = BlinkCache::default();
+
+    v.iter().map(|v| cache.multiply(*v, 75)).sum()
 }
 
 #[cfg(test)]
