@@ -93,10 +93,7 @@ impl<T: PartialEq + Debug + Copy + Clone + Parseable<Item = T>> Map<T> {
 
 #[cfg(test)]
 mod tests {
-    use nom::{
-        character::complete::{self, space0},
-        combinator::fail,
-    };
+    use nom::character::complete::{self, satisfy, space0};
     use nom_supreme::ParserExt;
 
     use super::*;
@@ -111,16 +108,9 @@ mod tests {
 
         #[tracing::instrument]
         fn parse(s: &str) -> IResult<&str, Self::Item> {
-            match s.char_indices().next() {
-                // ignore newlines
-                Some((_, '\n')) | Some((_, '\r')) => fail(s),
-                // other chars are fair game
-                Some((_, ch)) => {
-                    let (_, rest) = s.split_at(ch.len_utf8());
-                    Ok((rest, SomeChar::Value(ch)))
-                }
-                None => fail(s),
-            }
+            satisfy(|c| c != '\r' && c != '\n')
+                .map(SomeChar::Value)
+                .parse(s)
         }
     }
 
