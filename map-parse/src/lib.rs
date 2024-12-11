@@ -1,9 +1,11 @@
 use glam::IVec2;
 use nom::{
     character::complete::line_ending,
+    combinator::opt,
     multi::{many1, separated_list1},
     IResult, Parser,
 };
+use nom_supreme::ParserExt;
 use std::{collections::HashMap, fmt::Debug};
 
 /// Represents a rectangular map of values that is maintained
@@ -50,6 +52,10 @@ impl<T: Clone + PartialEq + Debug> Map<T> {
     pub fn get_mut(&mut self, pos: &IVec2) -> Option<&mut T> {
         self.values.get_mut(pos)
     }
+
+    pub fn values_iter(&self) -> impl Iterator<Item = (&IVec2, &T)> {
+        self.values.iter()
+    }
 }
 
 impl<T: PartialEq + Debug + Copy + Clone + Parseable<Item = T>> Map<T> {
@@ -62,6 +68,7 @@ impl<T: PartialEq + Debug + Copy + Clone + Parseable<Item = T>> Map<T> {
             many1(T::parse)
                 .map(|row_values| row_values.into_iter().enumerate().collect::<Vec<_>>()),
         )
+        .terminated(opt(line_ending))
         .map(|all| {
             all.iter().fold(Map::default(), |mut m, v| {
                 match m.cols {

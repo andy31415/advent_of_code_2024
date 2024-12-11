@@ -90,6 +90,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "aoc10"
+version = "0.1.0"
+dependencies = [
+ "dhat",
+ "divan",
+ "glam",
+ "itertools",
+ "map-parse",
+ "nom",
+ "nom-supreme",
+ "test-log",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "aoc2"
 version = "0.1.0"
 dependencies = [
