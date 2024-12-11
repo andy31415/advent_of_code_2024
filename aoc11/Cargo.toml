@@ -26,6 +26,7 @@ nom.workspace = true
 nom-supreme.workspace = true
 itertools.workspace = true
 test-log.workspace = true
+tracing-test = { version = "0.2.5", features = ["no-env-filter"] }
 
 [dev-dependencies]
 itertools = { workspace = true }

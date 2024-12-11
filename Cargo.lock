@@ -117,6 +117,7 @@ dependencies = [
  "test-log",
  "tracing",
  "tracing-subscriber",
+ "tracing-test",
 ]
 
 [[package]]
