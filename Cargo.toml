@@ -1,6 +1,6 @@
 [workspace]
 resolver = "2"
-members = ["aoc*"]
+members = ["aoc*", "map-parse"]
 
 [workspace.dependencies]
 
