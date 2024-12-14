@@ -27,6 +27,8 @@ nom-supreme.workspace = true
 itertools.workspace = true
 test-log.workspace = true
 map-parse = { path = "../map-parse" }
+tracing-test = { version = "0.2.5", features = ["no-env-filter"] }
+glam.workspace = true
 
 [dev-dependencies]
 itertools = { workspace = true }

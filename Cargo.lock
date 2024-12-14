@@ -126,6 +126,7 @@ version = "0.1.0"
 dependencies = [
  "dhat",
  "divan",
+ "glam",
  "itertools",
  "map-parse",
  "nom",
@@ -133,6 +134,7 @@ dependencies = [
  "test-log",
  "tracing",
  "tracing-subscriber",
+ "tracing-test",
 ]
 
 [[package]]
