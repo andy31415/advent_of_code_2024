@@ -88,9 +88,22 @@ pub fn part1(input: &str) -> i64 {
         .sum()
 }
 
-pub fn part2(input: &str) -> usize {
-    // TODO: implement
-    0
+pub fn part2(input: &str) -> i64 {
+    let (r, mut machines) = parse_machines(input).expect("valid input");
+    assert!(r.is_empty());
+
+    for m in machines.iter_mut() {
+        m.prize.x += 10000000000000;
+        m.prize.y += 10000000000000;
+    }
+
+    machines
+        .iter()
+        .map(|m| {
+            let (a, b) = m.compute_presses();
+            a * 3 + b
+        })
+        .sum()
 }
 
 #[cfg(test)]
