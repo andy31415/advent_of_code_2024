@@ -1,17 +1,17 @@
 [package]
-name = "{{project-name}}"
+name = "aoc14"
 version = "0.1.0"
 edition = "2021"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [[bin]]
-name = "{{project-name}}"
-path = "src/{{project-name}}.rs"
+name = "aoc14"
+path = "src/aoc14.rs"
 
 [[bench]]
-name = "{{project-name}}"
-path = "benches/{{project-name}}.rs"
+name = "aoc14"
+path = "benches/aoc14.rs"
 harness = false
 
 [features]

@@ -4,25 +4,25 @@ members = ["aoc*", "map-parse"]
 
 [workspace.dependencies]
 
-glam = "*"
-nom = "*"
-nom-supreme = "*"
+criterion = { version = "*", features = ["html_reports"] }
 dhat = "*"
 divan = "*"
-thiserror = "*"
+glam = "*"
+itertools = "*"
 miette = { version = "*", features = ["fancy"] }
-criterion = { version = "*", features = ["html_reports"] }
+nom = "*"
+nom-supreme = "*"
 petgraph = "*"
 rayon = "*"
 rstest = "*"
 rstest_reuse = "*"
+test-log = { version = "0.2.14", features = ["log", "trace"] }
+thiserror = "*"
 tracing = "*"
 tracing-subscriber = { version = "0.3.1", features = ["env-filter"] }
 tracing-tracy = "*"
 tracy-client = "*"
 tracy-client-sys = "*"
-itertools = "*"
-test-log = { version = "0.2.14", features = ["log", "trace"] }
 
 [profile.release]
 debug = 1
