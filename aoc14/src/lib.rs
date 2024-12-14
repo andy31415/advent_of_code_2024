@@ -175,7 +175,8 @@ fn is_suspicious_shape2(_: &Grid, pos: &HashSet<IVec2>) -> bool {
 }
 
 // this WORKS: at 7138 ...
-fn is_suspicious_shape(_: &Grid, pos: &HashSet<IVec2>) -> bool {
+#[allow(dead_code)]
+fn is_suspicious_shape3(_: &Grid, pos: &HashSet<IVec2>) -> bool {
     // find the largest connected line and filter based on that ...
     let mut connected = HashSet::new();
     while &connected != pos {
@@ -198,6 +199,11 @@ fn is_suspicious_shape(_: &Grid, pos: &HashSet<IVec2>) -> bool {
         }
     }
     false
+}
+
+fn is_suspicious_shape(_: &Grid, pos: &Vec<IVec2>) -> bool {
+    // Odd logic: no overlapping robots
+    pos.len() == pos.iter().collect::<HashSet<_>>().len()
 }
 
 pub fn part2(input: &str) -> usize {
