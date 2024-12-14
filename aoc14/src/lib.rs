@@ -1,4 +1,7 @@
-use std::{collections::HashMap, hash::Hash};
+use std::{
+    collections::{HashMap, HashSet, VecDeque},
+    hash::Hash,
+};
 
 use glam::IVec2;
 use nom::{
@@ -53,9 +56,9 @@ enum Quadrant {
 }
 
 impl Grid {
-    #[tracing::instrument(ret)]
+    #[tracing::instrument(ret, level = "trace")]
     fn move_robot(&self, r: &Robot, steps: usize) -> IVec2 {
-        tracing::info!("MOVING");
+        tracing::debug!("MOVING");
 
         let s = steps as i32;
         let sx = self.x as i32;
@@ -93,6 +96,21 @@ impl Grid {
             (false, false) => Quadrant::SE,
         })
     }
+
+    fn display_robots(&self, v: &HashSet<IVec2>, steps: usize) {
+        let mut s = String::with_capacity((self.x + 1) * self.y);
+        for y in 0..self.y {
+            for x in 0..self.x {
+                if v.contains(&IVec2::new(x as i32, y as i32)) {
+                    s.push('*');
+                } else {
+                    s.push('.');
+                }
+            }
+            s.push('\n');
+        }
+        println!("{}\nSTEPS: {}", s, steps);
+    }
 }
 
 pub fn part1(input: &str) -> usize {
@@ -117,7 +135,116 @@ pub fn part1(input: &str) -> usize {
         * m.get(&Some(Quadrant::SE)).copied().unwrap_or(0_usize)
 }
 
+// How does a christmas tree look like:
+//     *
+//    ***
+//   *   *
+//  *     *
+// ***   ***
+//  *     *
+// *       *
+//
+// So general logic seems to be: for every row, at most 2 runs of robots
+// DOES NOT WORK
+fn is_suspicious_shape1(g: &Grid, pos: &HashSet<IVec2>) -> bool {
+    for y in 0..(g.y as i32) {
+        let cnt = (0..(g.x as i32))
+            .map(|x| (x - 1, x))
+            .map(|(x1, x2)| {
+                (
+                    pos.contains(&IVec2::new(x1, y)),
+                    pos.contains(&IVec2::new(x2, y)),
+                )
+            })
+            .filter(|(p1, p2)| !*p1 && *p2)
+            .count();
+
+        if cnt > 2 {
+            return false;
+        }
+    }
+    true
+}
+
+/// let all the robots BE CONNECTED (N/E/S/W)
+/// DOES NOT WORK
+fn is_suspicious_shape2(_: &Grid, pos: &HashSet<IVec2>) -> bool {
+    let mut to_check = VecDeque::new();
+    to_check.push_back(*pos.iter().next().expect("non-empty set"));
+
+    let mut connected = HashSet::new();
+
+    while let Some(value) = to_check.pop_front() {
+        connected.insert(value);
+        for x in -1..=1 {
+            for y in -1..=1 {
+                let other = value + IVec2::new(x, y);
+                if !connected.contains(&other) && pos.contains(&other) {
+                    to_check.push_back(other);
+                }
+            }
+        }
+    }
+
+    connected.len() == pos.len()
+}
+
+// this works for SOME at 7138 ...
+fn is_suspicious_shape(_: &Grid, pos: &HashSet<IVec2>) -> bool {
+    // find the largest connected line and filter based on that ...
+    let mut connected = HashSet::new();
+    let mut max_cnt = 0;
+    while &connected != pos {
+        let mut to_check = VecDeque::new();
+        to_check.push_back(*pos.difference(&connected).next().expect("non-empty set"));
+
+        let mut cnt = 1;
+        while let Some(value) = to_check.pop_front() {
+            connected.insert(value);
+            cnt += 1;
+            for x in -1..=1 {
+                for y in -1..=1 {
+                    let other = value + IVec2::new(x, y);
+                    if !connected.contains(&other) && pos.contains(&other) {
+                        to_check.push_back(other);
+                    }
+                }
+            }
+        }
+        if cnt > max_cnt {
+            max_cnt = cnt
+        }
+    }
+
+    max_cnt > 50
+}
+
 pub fn part2(input: &str) -> usize {
+    let (r, robots) = parse_input(input).expect("valid input");
+    assert!(r.is_empty());
+
+    let g = Grid { x: 101, y: 103 };
+
+    let start_pos = robots.iter().map(|r| g.move_robot(r, 1)).collect();
+
+    for step_count in 0..10000000 {
+        let pos = robots.iter().map(|r| g.move_robot(r, step_count)).collect();
+
+        if step_count % 1000 == 1 {
+            println!("TESTING AT STEP {}", step_count);
+        }
+
+        if is_suspicious_shape(&g, &pos) {
+            g.display_robots(&pos, step_count);
+        }
+        // g.display_robots(&pos, step_count);
+
+        if pos == start_pos && step_count > 1 {
+            println!("WE looped!");
+            break;
+        }
+    }
+
     // TODO: implement
     0
 }
@@ -151,10 +278,5 @@ mod tests {
             ),
             IVec2::new(6, 5)
         );
-    }
-
-    #[test]
-    fn test_part2() {
-        assert_eq!(part2(include_str!("../example.txt")), 0);
     }
 }
