@@ -53,14 +53,26 @@ enum Quadrant {
 }
 
 impl Grid {
+    #[tracing::instrument(ret)]
     fn move_robot(&self, r: &Robot, steps: usize) -> IVec2 {
+        tracing::info!("MOVING");
+
         let s = steps as i32;
         let sx = self.x as i32;
         let sy = self.y as i32;
-        IVec2::new(
-            r.position.x + (r.velocity.x * (s % sx)) % sx,
-            r.position.y + (r.velocity.y * (s % sy)) % sy,
-        )
+
+        let vx = if r.velocity.x < 0 {
+            self.x as i32 + r.velocity.x
+        } else {
+            r.velocity.x
+        };
+        let vy = if r.velocity.y < 0 {
+            self.y as i32 + r.velocity.y
+        } else {
+            r.velocity.y
+        };
+
+        IVec2::new((r.position.x + vx * s) % sx, (r.position.y + vy * s) % sy)
     }
 
     fn get_quadrant(&self, pos: IVec2) -> Option<Quadrant> {
@@ -110,6 +122,33 @@ pub fn part2(input: &str) -> usize {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_log::test;
+
+    #[test]
+    fn test_move() {
+        let g = Grid { x: 11, y: 7 };
+        assert_eq!(
+            g.move_robot(
+                &Robot {
+                    position: IVec2::new(2, 4),
+                    velocity: IVec2::new(2, -3)
+                },
+                1
+            ),
+            IVec2::new(4, 1)
+        );
+
+        assert_eq!(
+            g.move_robot(
+                &Robot {
+                    position: IVec2::new(2, 4),
+                    velocity: IVec2::new(2, -3)
+                },
+                2
+            ),
+            IVec2::new(6, 5)
+        );
+    }
 
     #[test]
     fn test_part1() {
