@@ -99,7 +99,7 @@ pub fn part1(input: &str) -> usize {
     let (r, robots) = parse_input(input).expect("valid input");
     assert!(r.is_empty());
 
-    let g = Grid { x: 11, y: 7 };
+    let g = Grid { x: 101, y: 103 };
 
     let mut m = HashMap::new();
 
@@ -151,11 +151,6 @@ mod tests {
             ),
             IVec2::new(6, 5)
         );
-    }
-
-    #[test]
-    fn test_part1() {
-        assert_eq!(part1(include_str!("../example.txt")), 12);
     }
 
     #[test]
