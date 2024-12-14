@@ -193,7 +193,6 @@ fn is_suspicious_shape2(_: &Grid, pos: &HashSet<IVec2>) -> bool {
 fn is_suspicious_shape(_: &Grid, pos: &HashSet<IVec2>) -> bool {
     // find the largest connected line and filter based on that ...
     let mut connected = HashSet::new();
-    let mut max_cnt = 0;
     while &connected != pos {
         let mut to_check = VecDeque::new();
         to_check.push_back(*pos.difference(&connected).next().expect("non-empty set"));
@@ -209,12 +208,11 @@ fn is_suspicious_shape(_: &Grid, pos: &HashSet<IVec2>) -> bool {
                 }
             }
         }
-        if cnt > max_cnt {
-            max_cnt = cnt
+        if cnt > 60 {
+            return true;
         }
     }
-
-    max_cnt > 60
+    false
 }
 
 pub fn part2(input: &str) -> usize {
