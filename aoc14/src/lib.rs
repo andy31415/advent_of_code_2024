@@ -202,12 +202,10 @@ fn is_suspicious_shape(_: &Grid, pos: &HashSet<IVec2>) -> bool {
         while let Some(value) = to_check.pop_front() {
             connected.insert(value);
             cnt += 1;
-            for x in -1..=1 {
-                for y in -1..=1 {
-                    let other = value + IVec2::new(x, y);
-                    if !connected.contains(&other) && pos.contains(&other) {
-                        to_check.push_back(other);
-                    }
+            for (x, y) in [(-1, 0), (0, -1), (1, 0), (0, 1)] {
+                let other = value + IVec2::new(x, y);
+                if !connected.contains(&other) && pos.contains(&other) {
+                    to_check.push_back(other);
                 }
             }
         }
@@ -216,7 +214,7 @@ fn is_suspicious_shape(_: &Grid, pos: &HashSet<IVec2>) -> bool {
         }
     }
 
-    max_cnt > 50
+    max_cnt > 60
 }
 
 pub fn part2(input: &str) -> usize {
@@ -227,7 +225,7 @@ pub fn part2(input: &str) -> usize {
 
     let start_pos = robots.iter().map(|r| g.move_robot(r, 1)).collect();
 
-    for step_count in 0..10000000 {
+    for step_count in 0..(g.x * g.y) {
         let pos = robots.iter().map(|r| g.move_robot(r, step_count)).collect();
 
         if step_count % 1000 == 1 {
