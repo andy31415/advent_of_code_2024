@@ -206,18 +206,17 @@ pub fn part2(input: &str) -> usize {
 
     let g = Grid { x: 101, y: 103 };
 
-    let x = (0..(g.x * g.y))
+    let steps = (0..(g.x * g.y))
         .into_par_iter()
-        .map(|sc| {
-            let pos = robots.iter().map(|r| g.move_robot(r, sc)).collect();
-            (sc, is_suspicious_shape(&g, &pos))
+        .find_first(|sc| {
+            let pos = robots.iter().map(|r| g.move_robot(r, *sc)).collect();
+            is_suspicious_shape(&g, &pos)
         })
-        .find_first(|x| x.1)
         .expect("has something");
-    // let pos = robots.iter().map(|r| g.move_robot(r, x.0)).collect();
-    // g.display_robots(&pos, x.0);
 
-    x.0
+    // let pos = robots.iter().map(|r| g.move_robot(r, steps)).collect();
+    // g.display_robots(&pos, x.0);
+    steps
 }
 
 #[cfg(test)]
