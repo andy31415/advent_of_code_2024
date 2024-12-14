@@ -72,7 +72,10 @@ impl Grid {
             r.velocity.y
         };
 
-        IVec2::new((r.position.x + vx * s) % sx, (r.position.y + vy * s) % sy)
+        IVec2::new(
+            (r.position.x + vx * (s % sx)) % sx,
+            (r.position.y + vy * (s % sy)) % sy,
+        )
     }
 
     fn get_quadrant(&self, pos: IVec2) -> Option<Quadrant> {
