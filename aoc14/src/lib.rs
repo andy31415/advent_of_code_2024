@@ -12,6 +12,7 @@ use nom::{
     IResult, Parser,
 };
 use nom_supreme::ParserExt;
+use rayon::iter::IntoParallelIterator;
 
 #[derive(Debug, PartialEq)]
 struct Robot {
@@ -61,23 +62,10 @@ impl Grid {
         tracing::debug!("MOVING");
 
         let s = steps as i32;
-        let sx = self.x as i32;
-        let sy = self.y as i32;
-
-        let vx = if r.velocity.x < 0 {
-            self.x as i32 + r.velocity.x
-        } else {
-            r.velocity.x
-        };
-        let vy = if r.velocity.y < 0 {
-            self.y as i32 + r.velocity.y
-        } else {
-            r.velocity.y
-        };
 
         IVec2::new(
-            (r.position.x + vx * (s % sx)) % sx,
-            (r.position.y + vy * (s % sy)) % sy,
+            (r.position.x + r.velocity.x * s).rem_euclid(self.x as i32),
+            (r.position.y + r.velocity.y * s).rem_euclid(self.y as i32),
         )
     }
 
@@ -221,24 +209,15 @@ pub fn part2(input: &str) -> usize {
 
     let g = Grid { x: 101, y: 103 };
 
-    let start_pos = robots.iter().map(|r| g.move_robot(r, 1)).collect();
-
-    for step_count in 0..(g.x * g.y) {
-        let pos = robots.iter().map(|r| g.move_robot(r, step_count)).collect();
-
-        if step_count % 1000 == 1 {
-            println!("TESTING AT STEP {}", step_count);
-        }
-
-        if is_suspicious_shape(&g, &pos) {
-            g.display_robots(&pos, step_count);
-        }
-        // g.display_robots(&pos, step_count);
-
-        if pos == start_pos && step_count > 1 {
-            println!("WE looped!");
-            break;
-        }
+    for x in (0..(g.x * g.y))
+        .map(|sc| {
+            let pos = robots.iter().map(|r| g.move_robot(r, sc)).collect();
+            (sc, is_suspicious_shape(&g, &pos))
+        })
+        .filter(|x| x.1)
+    {
+        let pos = robots.iter().map(|r| g.move_robot(r, x.0)).collect();
+        g.display_robots(&pos, x.0);
     }
 
     // TODO: implement
