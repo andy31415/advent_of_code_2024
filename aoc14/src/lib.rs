@@ -13,6 +13,7 @@ use nom::{
 };
 use nom_supreme::ParserExt;
 use rayon::prelude::*;
+use tracing::Level;
 
 #[derive(Debug, PartialEq)]
 struct Robot {
@@ -91,7 +92,8 @@ impl Grid {
             }
             s.push('\n');
         }
-        println!("{}\nSTEPS: {}", s, steps);
+        tracing::info!("\n{}", s);
+        tracing::info!("STEPS: {}", steps);
     }
 }
 
@@ -223,8 +225,12 @@ pub fn part2(input: &str) -> usize {
         })
         .expect("has something");
 
-    // let pos = robots.iter().map(|r| g.move_robot(r, steps)).collect();
-    // g.display_robots(&pos, x.0);
+    if tracing::enabled!(Level::INFO) {
+        g.display_robots(
+            &robots.iter().map(|r| g.move_robot(r, steps)).collect(),
+            steps,
+        );
+    }
     steps
 }
 
