@@ -57,16 +57,9 @@ enum Quadrant {
 }
 
 impl Grid {
-    #[tracing::instrument(ret, level = "trace")]
     fn move_robot(&self, r: &Robot, steps: usize) -> IVec2 {
-        tracing::debug!("MOVING");
-
-        let s = steps as i32;
-
-        IVec2::new(
-            (r.position.x + r.velocity.x * s).rem_euclid(self.x as i32),
-            (r.position.y + r.velocity.y * s).rem_euclid(self.y as i32),
-        )
+        (r.position + r.velocity * (steps as i32))
+            .rem_euclid(IVec2::new(self.x as i32, self.y as i32))
     }
 
     fn get_quadrant(&self, pos: IVec2) -> Option<Quadrant> {
@@ -177,7 +170,7 @@ fn is_suspicious_shape2(_: &Grid, pos: &HashSet<IVec2>) -> bool {
     connected.len() == pos.len()
 }
 
-// this works for SOME at 7138 ...
+// this WORKS: at 7138 ...
 fn is_suspicious_shape(_: &Grid, pos: &HashSet<IVec2>) -> bool {
     // find the largest connected line and filter based on that ...
     let mut connected = HashSet::new();
