@@ -138,6 +138,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "aoc13"
+version = "0.1.0"
+dependencies = [
+ "dhat",
+ "divan",
+ "itertools",
+ "nom",
+ "nom-supreme",
+ "test-log",
+ "tracing",
+ "tracing-subscriber",
+ "tracing-test",
+]
+
+[[package]]
 name = "aoc2"
 version = "0.1.0"
 dependencies = [
