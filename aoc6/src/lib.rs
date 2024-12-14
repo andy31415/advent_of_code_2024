@@ -105,6 +105,7 @@ mod parse {
         start: Option<i32>, // where ^ is located
     }
 
+    #[allow(dead_code)]
     impl ParsedRow {
         pub(crate) fn new<W: Into<Vec<i32>>>(length: i32, walls: W, start: Option<i32>) -> Self {
             Self {
@@ -164,6 +165,7 @@ mod parse {
     }
 }
 
+#[allow(dead_code)]
 fn display_path(lab: &Lab, visited: &HashSet<Point>) -> String {
     let mut s = String::new();
     s.reserve((lab.rows * (lab.cols + 1)) as usize);

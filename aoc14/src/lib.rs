@@ -78,6 +78,7 @@ impl Grid {
         })
     }
 
+    #[allow(dead_code)]
     fn display_robots(&self, v: &HashSet<IVec2>, steps: usize) {
         let mut s = String::with_capacity((self.x + 1) * self.y);
         for y in 0..self.y {
@@ -126,7 +127,9 @@ pub fn part1(input: &str) -> usize {
 // *       *
 //
 // So general logic seems to be: for every row, at most 2 runs of robots
-// DOES NOT WORK
+// DOES NOT WORK (only SOME of the robots are building the tree, also there is a square around the
+// tree)
+#[allow(dead_code)]
 fn is_suspicious_shape1(g: &Grid, pos: &HashSet<IVec2>) -> bool {
     for y in 0..(g.y as i32) {
         let cnt = (0..(g.x as i32))
@@ -148,7 +151,8 @@ fn is_suspicious_shape1(g: &Grid, pos: &HashSet<IVec2>) -> bool {
 }
 
 /// let all the robots BE CONNECTED (N/E/S/W)
-/// DOES NOT WORK
+/// DOES NOT WORK (only some of the robots are building the tree)
+#[allow(dead_code)]
 fn is_suspicious_shape2(_: &Grid, pos: &HashSet<IVec2>) -> bool {
     let mut to_check = VecDeque::new();
     to_check.push_back(*pos.iter().next().expect("non-empty set"));

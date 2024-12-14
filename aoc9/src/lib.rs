@@ -216,7 +216,7 @@ pub fn part2(input: &str) -> usize {
         let start_idx = blocks
             .iter()
             .enumerate()
-            .find(|(idx, value)| **value == BlockContent::File(end_id))
+            .find(|(_, value)| **value == BlockContent::File(end_id))
             .expect("Files exist")
             .0;
 
