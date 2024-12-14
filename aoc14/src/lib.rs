@@ -201,8 +201,11 @@ fn is_suspicious_shape3(_: &Grid, pos: &HashSet<IVec2>) -> bool {
     false
 }
 
+#[allow(dead_code)]
+#[allow(clippy::ptr_arg)] // on because it helps in type resolution
 fn is_suspicious_shape(_: &Grid, pos: &Vec<IVec2>) -> bool {
     // Odd logic: no overlapping robots
+    // However: VERY FAST!
     pos.len() == pos.iter().collect::<HashSet<_>>().len()
 }
 
