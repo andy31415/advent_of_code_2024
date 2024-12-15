@@ -82,7 +82,7 @@ impl Display for Input {
                     }?;
                 }
             }
-            f.write_char('\n');
+            f.write_char('\n')?;
         }
         Ok(())
     }
@@ -220,10 +220,7 @@ fn parse_input(s: &str) -> nom::IResult<&str, Input> {
     .parse(rest)?;
 
     let mut robot_position = None;
-    if let Some((pos, value)) = map
-        .values_iter()
-        .find(|(pos, value)| **value == Cell::Robot)
-    {
+    if let Some((pos, _)) = map.values_iter().find(|(_, value)| **value == Cell::Robot) {
         robot_position = Some(*pos);
     }
 
@@ -272,10 +269,9 @@ pub fn part2(s: &str) -> i32 {
     println!("MAP:\n{}", input);
 
     for instruction in input.instructions.clone() {
-        // println!("ROBOT AT: {:?}", robot_pos);
+        println!("Performing: {:?}", instruction);
         input.perform(instruction);
-        // println!("ROBOT MOVED: {:?}", robot_pos);
-        // println!("MAP:\n{}", input);
+        println!("MAP:\n{}", input);
     }
 
     input
