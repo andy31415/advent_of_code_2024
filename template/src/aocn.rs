@@ -9,6 +9,8 @@ fn main() {
     #[cfg(feature = "dhat-heap")]
     let _profiler = dhat::Profiler::new_heap();
 
+    color_eyre::install()?;
+
     let stdout_log = tracing_subscriber::fmt::layer().compact();
     
     tracing_subscriber::registry()

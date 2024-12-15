@@ -25,6 +25,7 @@ itertools.workspace = true
 miette.workspace = true
 nom-supreme.workspace = true
 nom.workspace = true
+nom_locate.workspace = true
 rayon.workspace = true
 rstest.workspace = true
 rstest_reuse.workspace = true

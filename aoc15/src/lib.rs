@@ -15,6 +15,21 @@ use nom::{
 };
 use nom_supreme::ParserExt;
 
+#[derive(thiserror::Error, Debug, PartialEq)]
+enum InputParseError {
+    #[error("Failed to parse using Nom")]
+    NomError(nom::Err<nom::error::Error<String>>),
+
+    #[error("Unparsed data remained")]
+    UnparsedData(String),
+}
+
+impl<INNER: Into<String>> From<nom::Err<nom::error::Error<INNER>>> for InputParseError {
+    fn from(value: nom::Err<nom::error::Error<INNER>>) -> Self {
+        InputParseError::NomError(value.map_input(|i| i.into()))
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 enum Cell {
     Wall,
@@ -209,8 +224,8 @@ impl Input {
     }
 }
 
-fn parse_input(s: &str) -> nom::IResult<&str, Input> {
-    let (rest, mut map) = Map::<Cell>::parse(s)?;
+fn parse_input(s: &str) -> Result<Input, InputParseError> {
+    let (rest, mut map) = Map::<Cell>::parse(s).map_err(InputParseError::from)?;
 
     let (rest, instructions) = many1(
         alt((
@@ -223,7 +238,12 @@ fn parse_input(s: &str) -> nom::IResult<&str, Input> {
     )
     .preceded_by(many0(line_ending))
     .terminated(many0(line_ending))
-    .parse(rest)?;
+    .parse(rest)
+    .map_err(InputParseError::from)?;
+
+    if !rest.is_empty() {
+        return Err(InputParseError::UnparsedData(rest.into()));
+    }
 
     let mut robot_position = None;
     if let Some((pos, _)) = map.values_iter().find(|(_, value)| **value == Cell::Robot) {
@@ -234,35 +254,30 @@ fn parse_input(s: &str) -> nom::IResult<&str, Input> {
         *map.get_mut(&pos).expect("Pos is valid") = Cell::Empty;
     }
 
-    Ok((
-        rest,
-        Input {
-            map,
-            instructions,
-            robot_position: robot_position.expect("A robot position must exist"),
-        },
-    ))
+    Ok(Input {
+        map,
+        instructions,
+        robot_position: robot_position.expect("A robot position must exist"),
+    })
 }
 
-pub fn part1(s: &str) -> i32 {
-    let (r, mut input) = parse_input(s).expect("valid input");
-    assert!(r.is_empty());
+pub fn part1(s: &str) -> color_eyre::Result<i32> {
+    let mut input = parse_input(s)?;
 
     for instruction in input.instructions.clone() {
         input.perform(instruction);
     }
 
-    input
+    Ok(input
         .map
         .values_iter()
         .filter(|(_, value)| **value == Cell::Box)
         .map(|(p, _)| p.y * 100 + p.x)
-        .sum()
+        .sum())
 }
 
-pub fn part2(s: &str) -> i32 {
-    let (r, mut input) = parse_input(s).expect("valid input");
-    assert!(r.is_empty());
+pub fn part2(s: &str) -> color_eyre::Result<i32> {
+    let mut input = parse_input(s)?;
 
     input = input.double_horizontally();
 
@@ -270,12 +285,12 @@ pub fn part2(s: &str) -> i32 {
         input.perform(instruction);
     }
 
-    input
+    Ok(input
         .map
         .values_iter()
         .filter(|(_, value)| **value == Cell::LargeBoxLeft)
         .map(|(p, _)| p.y * 100 + p.x)
-        .sum()
+        .sum())
 }
 
 #[cfg(test)]
@@ -284,11 +299,17 @@ mod tests {
 
     #[test]
     fn test_part1() {
-        assert_eq!(part1(include_str!("../example.txt")), 2028);
+        assert_eq!(
+            part1(include_str!("../example.txt")).expect("success"),
+            2028
+        );
     }
 
     #[test]
     fn test_part2() {
-        assert_eq!(part2(include_str!("../example.txt")), 1751);
+        assert_eq!(
+            part2(include_str!("../example.txt")).expect("success"),
+            1751
+        );
     }
 }

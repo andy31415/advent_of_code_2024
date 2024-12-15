@@ -36,6 +36,9 @@ tracing = { workspace = true }
 tracy-client-sys.workspace = true
 tracy-client.workspace = true
 map-parse = { path = "../map-parse" }
+color-eyre.workspace = true
+eyre.workspace = true
+nom_locate.workspace = true
 
 [dev-dependencies]
 itertools = { workspace = true }
