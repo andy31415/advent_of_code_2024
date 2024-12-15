@@ -1,0 +1,40 @@
+[package]
+name = "aoc15"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[[bin]]
+name = "aoc15"
+path = "src/aoc15.rs"
+
+[[bench]]
+name = "aoc15"
+path = "benches/aoc15.rs"
+harness = false
+
+[features]
+dhat-heap = []
+
+[dependencies]
+dhat.workspace = true
+divan.workspace = true
+glam.workspace = true
+itertools.workspace = true
+miette.workspace = true
+nom-supreme.workspace = true
+nom.workspace = true
+rayon.workspace = true
+rstest.workspace = true
+rstest_reuse.workspace = true
+test-log.workspace = true
+thiserror.workspace = true
+tracing-subscriber = { workspace = true }
+tracing-tracy.workspace = true
+tracing = { workspace = true }
+tracy-client-sys.workspace = true
+tracy-client.workspace = true
+
+[dev-dependencies]
+itertools = { workspace = true }
