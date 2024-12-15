@@ -1,4 +1,7 @@
-use std::fmt::{Display, Write};
+use std::{
+    default,
+    fmt::{Display, Write},
+};
 
 use glam::IVec2;
 use map_parse::Map;
@@ -18,6 +21,8 @@ enum Cell {
     Robot,
     Box,
     Empty,
+    LargeBoxLeft,
+    LargeBoxRight,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -56,22 +61,26 @@ impl map_parse::Parseable for Cell {
 struct Input {
     map: Map<Cell>,
     instructions: Vec<Instruction>,
+    robot_position: IVec2,
 }
 
 impl Display for Input {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         for y in 0..self.map.row_count() {
             for x in 0..self.map.col_count() {
-                match self
-                    .map
-                    .get(&IVec2::new(x as i32, y as i32))
-                    .expect("valid location")
-                {
-                    Cell::Wall => f.write_char('#'),
-                    Cell::Empty => f.write_char('.'),
-                    Cell::Box => f.write_char('O'),
-                    Cell::Robot => f.write_char('@'),
-                };
+                let pos = IVec2::new(x as i32, y as i32);
+                if self.robot_position == pos {
+                    f.write_char('@')?;
+                } else {
+                    match self.map.get(&pos).expect("valid location") {
+                        Cell::Wall => f.write_char('#'),
+                        Cell::Empty => f.write_char('.'),
+                        Cell::Box => f.write_char('O'),
+                        Cell::Robot => f.write_char('@'),
+                        Cell::LargeBoxLeft => f.write_char('['),
+                        Cell::LargeBoxRight => f.write_char(']'),
+                    }?;
+                }
             }
             f.write_char('\n');
         }
@@ -80,47 +89,33 @@ impl Display for Input {
 }
 
 impl Input {
-    fn take_robot(&mut self) -> Option<IVec2> {
-        let mut found_pos = None;
-        if let Some((pos, value)) = self
-            .map
-            .values_iter()
-            .find(|(pos, value)| **value == Cell::Robot)
-        {
-            found_pos = Some(*pos);
-        }
-
-        if let Some(pos) = found_pos {
-            *self.map.get_mut(&pos).expect("Pos is valid") = Cell::Empty;
-        }
-
-        found_pos
-    }
-
     // returns the new robot position if push is ok.
-    fn move_robot(&mut self, robot_pos: IVec2, instruction: Instruction) -> IVec2 {
+    fn perform(&mut self, instruction: Instruction) {
         let dir = instruction.push_direction();
 
-        assert_eq!(self.map.get(&robot_pos), Some(&Cell::Empty));
+        assert_eq!(self.map.get(&self.robot_position), Some(&Cell::Empty));
 
         // assume area IS walled off
-        let mut end = robot_pos + dir;
+        let mut end = self.robot_position + dir;
         while self.map.get(&end) == Some(&Cell::Box) {
             end += dir;
         }
         if self.map.get(&end) == Some(&Cell::Wall) {
-            return robot_pos; // cannot move anything.
+            return; // cannot move anything.
         }
         // move all boxes - first box becomes last box
         *self.map.get_mut(&end).expect("valid") = Cell::Box;
-        *self.map.get_mut(&(robot_pos + dir)).expect("valid") = Cell::Empty;
+        *self
+            .map
+            .get_mut(&(self.robot_position + dir))
+            .expect("valid") = Cell::Empty;
 
-        robot_pos + dir
+        self.robot_position += dir
     }
 }
 
 fn parse_input(s: &str) -> nom::IResult<&str, Input> {
-    let (rest, map) = Map::<Cell>::parse(s)?;
+    let (rest, mut map) = Map::<Cell>::parse(s)?;
 
     let (rest, instructions) = many1(
         alt((
@@ -135,18 +130,35 @@ fn parse_input(s: &str) -> nom::IResult<&str, Input> {
     .terminated(many0(line_ending))
     .parse(rest)?;
 
-    Ok((rest, Input { map, instructions }))
+    let mut robot_position = None;
+    if let Some((pos, value)) = map
+        .values_iter()
+        .find(|(pos, value)| **value == Cell::Robot)
+    {
+        robot_position = Some(*pos);
+    }
+
+    if let Some(pos) = robot_position {
+        *map.get_mut(&pos).expect("Pos is valid") = Cell::Empty;
+    }
+
+    Ok((
+        rest,
+        Input {
+            map,
+            instructions,
+            robot_position: robot_position.expect("A robot position must exist"),
+        },
+    ))
 }
 
 pub fn part1(s: &str) -> i32 {
     let (r, mut input) = parse_input(s).expect("valid input");
     assert!(r.is_empty());
 
-    let mut robot_pos = input.take_robot().expect("Has a robot");
-
-    for i in input.instructions.clone() {
+    for instruction in input.instructions.clone() {
         // println!("ROBOT AT: {:?}", robot_pos);
-        robot_pos = input.move_robot(robot_pos, i);
+        input.perform(instruction);
         // println!("ROBOT MOVED: {:?}", robot_pos);
         // println!("MAP:\n{}", input);
     }
