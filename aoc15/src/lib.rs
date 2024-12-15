@@ -94,25 +94,20 @@ impl Input {
     fn push_object(&mut self, pos: IVec2, direction: IVec2) {
         let value = *self.map.get(&pos).expect("valid position");
 
+        let mut push_positions = Vec::with_capacity(2);
+        push_positions.push(pos);
+
         match value {
-            Cell::Box => {
-                self.push_object(pos + direction, direction);
-            }
-            Cell::Empty => { /* nothing to move ... */ }
+            Cell::Box => {}
+            Cell::Empty => return,
             Cell::LargeBoxLeft => {
                 if direction.y != 0 {
-                    self.push_object(pos + direction, direction);
-                    self.push_object(pos + direction + IVec2::new(1, 0), direction);
-                } else {
-                    self.push_object(pos + direction, direction)
+                    push_positions.push(pos + IVec2::new(1, 0));
                 }
             }
             Cell::LargeBoxRight => {
                 if direction.y != 0 {
-                    self.push_object(pos + direction, direction);
-                    self.push_object(pos + direction + IVec2::new(-1, 0), direction);
-                } else {
-                    self.push_object(pos + direction, direction)
+                    push_positions.push(pos + IVec2::new(-1, 0));
                 }
             }
             _ => {
@@ -120,10 +115,21 @@ impl Input {
             }
         }
 
-        let upd = self.map.get_mut(&(pos + direction)).expect("valid");
-        assert_eq!(*upd, Cell::Empty);
-        *upd = value;
-        *self.map.get_mut(&pos).expect("valid") = Cell::Empty;
+        // make room
+        for p in push_positions.iter() {
+            self.push_object(p + direction, direction);
+        }
+
+        // now replace
+        for p in push_positions {
+            let old_value = *self.map.get(&p).expect("valid");
+
+            let upd = self.map.get_mut(&(p + direction)).expect("valid");
+            assert_eq!(*upd, Cell::Empty);
+            *upd = old_value;
+
+            *self.map.get_mut(&p).expect("valid") = Cell::Empty;
+        }
 
         // TODO: implement
     }
@@ -158,8 +164,10 @@ impl Input {
 
         assert_eq!(self.map.get(&self.robot_position), Some(&Cell::Empty));
 
-        if self.can_push(self.robot_position + dir, dir) {
-            self.push_object(self.robot_position + dir, dir);
+        let object_pos = self.robot_position + dir;
+
+        if self.can_push(object_pos, dir) {
+            self.push_object(object_pos, dir);
             self.robot_position += dir;
         }
     }
@@ -243,10 +251,7 @@ pub fn part1(s: &str) -> i32 {
     assert!(r.is_empty());
 
     for instruction in input.instructions.clone() {
-        // println!("ROBOT AT: {:?}", robot_pos);
         input.perform(instruction);
-        // println!("ROBOT MOVED: {:?}", robot_pos);
-        // println!("MAP:\n{}", input);
     }
 
     input
@@ -258,20 +263,19 @@ pub fn part1(s: &str) -> i32 {
 }
 
 pub fn part2(s: &str) -> i32 {
-    // TODO: implement
     let (r, mut input) = parse_input(s).expect("valid input");
     assert!(r.is_empty());
 
-    println!("MAP:\n{}", input);
+    // println!("MAP:\n{}", input);
     input = input.double_horizontally();
 
-    println!("DOUBLED:");
-    println!("MAP:\n{}", input);
+    // println!("DOUBLED:");
+    // println!("MAP:\n{}", input);
 
     for instruction in input.instructions.clone() {
-        println!("Performing: {:?}", instruction);
+        // println!("Performing: {:?}", instruction);
         input.perform(instruction);
-        println!("MAP:\n{}", input);
+        // println!("MAP:\n{}", input);
     }
 
     input
@@ -293,6 +297,6 @@ mod tests {
 
     #[test]
     fn test_part2() {
-        assert_eq!(part2(include_str!("../example.txt")), 0);
+        assert_eq!(part2(include_str!("../example.txt")), 1751);
     }
 }
