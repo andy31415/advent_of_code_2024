@@ -1,6 +1,5 @@
 use std::{
     collections::HashMap,
-    default,
     fmt::{Display, Write},
 };
 
@@ -91,27 +90,64 @@ impl Display for Input {
 
 impl Input {
     // returns the new robot position if push is ok.
+
+    fn push_object(&mut self, pos: IVec2, direction: IVec2) {
+        let value = *self.map.get(&pos).expect("valid position");
+
+        match value {
+            Cell::Box => {
+                self.push_object(pos + direction, direction);
+                let upd = self.map.get_mut(&(pos + direction)).expect("valid");
+                assert_eq!(*upd, Cell::Empty);
+                *upd = Cell::Box;
+                *self.map.get_mut(&pos).expect("valid") = Cell::Empty;
+            }
+            Cell::Empty => { /* nothing to move ... */ }
+            Cell::LargeBoxLeft => todo!(),
+            Cell::LargeBoxRight => todo!(),
+
+            _ => {
+                panic!("Unpushable object!");
+            }
+        }
+
+        // TODO: implement
+    }
+
+    fn can_push(&self, pos: IVec2, direction: IVec2) -> bool {
+        match self.map.get(&pos).expect("valid position") {
+            Cell::Wall => false,
+            Cell::Robot => panic!("Robot should not exist in the map directly"),
+            Cell::Box => self.can_push(pos + direction, direction),
+            Cell::Empty => true,
+            Cell::LargeBoxLeft => {
+                if direction.y != 0 {
+                    self.can_push(pos + direction, direction)
+                        && self.can_push(pos + IVec2::new(1, 0) + direction, direction)
+                } else {
+                    self.can_push(pos + direction, direction)
+                }
+            }
+            Cell::LargeBoxRight => {
+                if direction.y != 0 {
+                    self.can_push(pos + direction, direction)
+                        && self.can_push(pos + IVec2::new(-1, 0) + direction, direction)
+                } else {
+                    self.can_push(pos + direction, direction)
+                }
+            }
+        }
+    }
+
     fn perform(&mut self, instruction: Instruction) {
         let dir = instruction.push_direction();
 
         assert_eq!(self.map.get(&self.robot_position), Some(&Cell::Empty));
 
-        // assume area IS walled off
-        let mut end = self.robot_position + dir;
-        while self.map.get(&end) == Some(&Cell::Box) {
-            end += dir;
+        if self.can_push(self.robot_position + dir, dir) {
+            self.push_object(self.robot_position + dir, dir);
+            self.robot_position += dir;
         }
-        if self.map.get(&end) == Some(&Cell::Wall) {
-            return; // cannot move anything.
-        }
-        // move all boxes - first box becomes last box
-        *self.map.get_mut(&end).expect("valid") = Cell::Box;
-        *self
-            .map
-            .get_mut(&(self.robot_position + dir))
-            .expect("valid") = Cell::Empty;
-
-        self.robot_position += dir
     }
 
     fn double_horizontally(self) -> Self {
