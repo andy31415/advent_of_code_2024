@@ -97,19 +97,33 @@ impl Input {
         match value {
             Cell::Box => {
                 self.push_object(pos + direction, direction);
-                let upd = self.map.get_mut(&(pos + direction)).expect("valid");
-                assert_eq!(*upd, Cell::Empty);
-                *upd = Cell::Box;
-                *self.map.get_mut(&pos).expect("valid") = Cell::Empty;
             }
             Cell::Empty => { /* nothing to move ... */ }
-            Cell::LargeBoxLeft => todo!(),
-            Cell::LargeBoxRight => todo!(),
-
+            Cell::LargeBoxLeft => {
+                if direction.y != 0 {
+                    self.push_object(pos + direction, direction);
+                    self.push_object(pos + direction + IVec2::new(1, 0), direction);
+                } else {
+                    self.push_object(pos + direction, direction)
+                }
+            }
+            Cell::LargeBoxRight => {
+                if direction.y != 0 {
+                    self.push_object(pos + direction, direction);
+                    self.push_object(pos + direction + IVec2::new(-1, 0), direction);
+                } else {
+                    self.push_object(pos + direction, direction)
+                }
+            }
             _ => {
                 panic!("Unpushable object!");
             }
         }
+
+        let upd = self.map.get_mut(&(pos + direction)).expect("valid");
+        assert_eq!(*upd, Cell::Empty);
+        *upd = value;
+        *self.map.get_mut(&pos).expect("valid") = Cell::Empty;
 
         // TODO: implement
     }
