@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     default,
     fmt::{Display, Write},
 };
@@ -112,6 +113,44 @@ impl Input {
 
         self.robot_position += dir
     }
+
+    fn double_horizontally(self) -> Self {
+        let rows = self.map.row_count();
+        let cols = self.map.col_count() * 2;
+
+        let mut expanded_map = HashMap::new();
+
+        // compute expansion
+        for (pos, value) in self.map.values_iter() {
+            let p1 = *pos * IVec2::new(2, 1);
+            let p2 = p1 + IVec2::new(1, 0);
+            match value {
+                Cell::Wall => {
+                    expanded_map.insert(p1, Cell::Wall);
+                    expanded_map.insert(p2, Cell::Wall);
+                }
+                Cell::Robot => {
+                    expanded_map.insert(p1, Cell::Robot);
+                    expanded_map.insert(p2, Cell::Empty);
+                }
+                Cell::Box => {
+                    expanded_map.insert(p1, Cell::LargeBoxLeft);
+                    expanded_map.insert(p2, Cell::LargeBoxRight);
+                }
+                Cell::Empty => {
+                    expanded_map.insert(p1, Cell::Empty);
+                    expanded_map.insert(p2, Cell::Empty);
+                }
+                _ => panic!("Map cannot be doubled - it looks already doubled."),
+            };
+        }
+
+        Input {
+            map: Map::create(rows, cols, expanded_map),
+            instructions: self.instructions,
+            robot_position: self.robot_position * IVec2::new(2, 1),
+        }
+    }
 }
 
 fn parse_input(s: &str) -> nom::IResult<&str, Input> {
@@ -171,9 +210,30 @@ pub fn part1(s: &str) -> i32 {
         .sum()
 }
 
-pub fn part2(input: &str) -> usize {
+pub fn part2(s: &str) -> i32 {
     // TODO: implement
-    0
+    let (r, mut input) = parse_input(s).expect("valid input");
+    assert!(r.is_empty());
+
+    println!("MAP:\n{}", input);
+    input = input.double_horizontally();
+
+    println!("DOUBLED:");
+    println!("MAP:\n{}", input);
+
+    for instruction in input.instructions.clone() {
+        // println!("ROBOT AT: {:?}", robot_pos);
+        input.perform(instruction);
+        // println!("ROBOT MOVED: {:?}", robot_pos);
+        // println!("MAP:\n{}", input);
+    }
+
+    input
+        .map
+        .values_iter()
+        .filter(|(_, value)| **value == Cell::LargeBoxLeft)
+        .map(|(p, _)| p.y * 100 + p.x)
+        .sum()
 }
 
 #[cfg(test)]

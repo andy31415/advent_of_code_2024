@@ -33,6 +33,10 @@ pub trait Parseable {
 }
 
 impl<T: Clone + PartialEq + Debug> Map<T> {
+    pub fn create(rows: usize, cols: usize, values: HashMap<IVec2, T>) -> Self {
+        Self { rows, cols, values }
+    }
+
     pub fn is_inside(&self, pos: IVec2) -> bool {
         pos.x >= 0 && (pos.x as usize) < self.cols && pos.y >= 0 && (pos.y as usize) < self.rows
     }
