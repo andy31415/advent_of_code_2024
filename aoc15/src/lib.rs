@@ -130,8 +130,6 @@ impl Input {
 
             *self.map.get_mut(&p).expect("valid") = Cell::Empty;
         }
-
-        // TODO: implement
     }
 
     fn can_push(&self, pos: IVec2, direction: IVec2) -> bool {
@@ -266,16 +264,10 @@ pub fn part2(s: &str) -> i32 {
     let (r, mut input) = parse_input(s).expect("valid input");
     assert!(r.is_empty());
 
-    // println!("MAP:\n{}", input);
     input = input.double_horizontally();
 
-    // println!("DOUBLED:");
-    // println!("MAP:\n{}", input);
-
     for instruction in input.instructions.clone() {
-        // println!("Performing: {:?}", instruction);
         input.perform(instruction);
-        // println!("MAP:\n{}", input);
     }
 
     input
