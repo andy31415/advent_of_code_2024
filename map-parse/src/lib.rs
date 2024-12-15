@@ -76,7 +76,8 @@ impl<T: PartialEq + Debug + Copy + Clone + Parseable<Item = T>> Map<T> {
                     _ => assert_eq!(
                         m.cols,
                         v.len(),
-                        "All rows of a map must be of the same length"
+                        "All rows of a map must be of the same length. Got {:?}",
+                        v
                     ),
                 }
                 for (x, value) in v {

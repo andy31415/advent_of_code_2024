@@ -177,6 +177,30 @@ dependencies = [
 ]
 
 [[package]]
+name = "aoc15"
+version = "0.1.0"
+dependencies = [
+ "dhat",
+ "divan",
+ "glam",
+ "itertools",
+ "map-parse",
+ "miette",
+ "nom",
+ "nom-supreme",
+ "rayon",
+ "rstest",
+ "rstest_reuse",
+ "test-log",
+ "thiserror 1.0.69",
+ "tracing",
+ "tracing-subscriber",
+ "tracing-tracy",
+ "tracy-client",
+ "tracy-client-sys",
+]
+
+[[package]]
 name = "aoc2"
 version = "0.1.0"
 dependencies = [
