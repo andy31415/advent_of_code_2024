@@ -1,3 +1,9 @@
+use std::{
+    cmp::min,
+    collections::{HashMap, VecDeque},
+    hash::Hash,
+};
+
 use glam::IVec2;
 use map_parse::Parseable;
 use nom::{branch::alt, bytes::complete::tag, Parser as _};
@@ -40,6 +46,7 @@ impl Parseable for Cell {
 struct Input {
     maze: map_parse::Map<Cell>,
     start: IVec2,
+    end: IVec2,
 }
 
 fn parse_input(s: &str) -> Result<Input, InputParseError> {
@@ -55,7 +62,13 @@ fn parse_input(s: &str) -> Result<Input, InputParseError> {
         Some(value) => *value.0,
     };
 
-    Ok(Input { maze, start })
+    let end = maze.values_iter().find(|(_, v)| **v == Cell::End);
+    let end = match end {
+        None => return Err(InputParseError::MissingStart),
+        Some(value) => *value.0,
+    };
+
+    Ok(Input { maze, start, end })
 }
 
 impl<INNER: Into<String>> From<nom::Err<nom::error::Error<INNER>>> for InputParseError {
@@ -64,14 +77,95 @@ impl<INNER: Into<String>> From<nom::Err<nom::error::Error<INNER>>> for InputPars
     }
 }
 
-pub fn part1(input: &str) -> color_eyre::Result<usize> {
-    let mut input = parse_input(input)?;
+#[derive(Debug, PartialEq, Eq, Copy, Clone, Hash)]
+enum Direction {
+    E,
+    N,
+    S,
+    W,
+}
 
-    todo!();
+impl Direction {
+    fn vec(&self) -> IVec2 {
+        match self {
+            Direction::E => IVec2::new(1, 0),
+            Direction::N => IVec2::new(0, -1),
+            Direction::S => IVec2::new(0, 1),
+            Direction::W => IVec2::new(-1, 0),
+        }
+    }
+
+    fn turn_left(&self) -> Direction {
+        match self {
+            Direction::E => Direction::N,
+            Direction::N => Direction::W,
+            Direction::S => Direction::E,
+            Direction::W => Direction::S,
+        }
+    }
+
+    fn turn_right(&self) -> Direction {
+        match self {
+            Direction::E => Direction::S,
+            Direction::N => Direction::E,
+            Direction::S => Direction::W,
+            Direction::W => Direction::N,
+        }
+    }
+}
+
+pub fn part1(input: &str) -> color_eyre::Result<usize> {
+    let input = parse_input(input)?;
+
+    // fill up the cost from the start
+    let mut to_check = VecDeque::new();
+    let mut route_costs = HashMap::new();
+
+    route_costs.insert((input.start, Direction::E), 0);
+    to_check.push_back((input.start, Direction::E, 0));
+
+    while let Some((pos, heading, cost)) = to_check.pop_front() {
+        let next_choices = [
+            (pos + heading.vec(), heading, cost + 1),
+            (pos, heading.turn_left(), cost + 1000),
+            (pos, heading.turn_right(), cost + 1000),
+        ];
+
+        for (next_pos, next_heading, next_cost) in next_choices {
+            if input.maze.get(&next_pos).unwrap_or(&Cell::Wall) != &Cell::Wall
+                && match route_costs.get(&(next_pos, next_heading)) {
+                    None => true,
+                    Some(value) if *value > next_cost => true,
+                    _ => false,
+                }
+            {
+                to_check.push_back((next_pos, next_heading, next_cost));
+                route_costs.insert((next_pos, next_heading), next_cost);
+            }
+        }
+    }
+
+    Ok(**[
+        route_costs
+            .get(&(input.end, Direction::N))
+            .expect("Route exists"),
+        route_costs
+            .get(&(input.end, Direction::E))
+            .expect("Route exists"),
+        route_costs
+            .get(&(input.end, Direction::S))
+            .expect("Route exists"),
+        route_costs
+            .get(&(input.end, Direction::W))
+            .expect("Route exists"),
+    ]
+    .iter()
+    .min()
+    .expect("have values"))
 }
 
 pub fn part2(input: &str) -> color_eyre::Result<usize> {
-    let mut input = parse_input(input)?;
+    let input = parse_input(input)?;
 
     todo!();
 }
@@ -93,7 +187,7 @@ mod tests {
         init_tests();
         assert_eq!(
             part1(include_str!("../example.txt")).expect("success"),
-            11048
+            7036
         );
     }
 
