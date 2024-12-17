@@ -18,6 +18,7 @@ harness = false
 dhat-heap = []
 
 [dependencies]
+color-eyre.workspace = true
 dhat.workspace = true
 divan.workspace = true
 glam.workspace = true

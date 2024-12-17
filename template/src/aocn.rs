@@ -5,7 +5,7 @@ use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt, EnvFilte
 static ALLOC: dhat::Alloc = dhat::Alloc;
 
 #[tracing::instrument]
-fn main() {
+fn main() -> color_eyre::eyre::Result<()> {
     #[cfg(feature = "dhat-heap")]
     let _profiler = dhat::Profiler::new_heap();
 
@@ -18,9 +18,11 @@ fn main() {
         .with(EnvFilter::from_default_env())
         .init();
 
-    let s1 = {{project-name}}::part1(include_str!("../input.txt"));
+    let s1 = {{project-name}}::part1(include_str!("../input.txt"))?;
     println!("Part 1: {}", s1);
 
-    let s2 = {{project-name}}::part2(include_str!("../input.txt"));
+    let s2 = {{project-name}}::part2(include_str!("../input.txt"))?;
     println!("Part 2: {}", s2);
+
+    Ok(())
 }

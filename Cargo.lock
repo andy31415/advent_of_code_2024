@@ -204,6 +204,32 @@ dependencies = [
 ]
 
 [[package]]
+name = "aoc16"
+version = "0.1.0"
+dependencies = [
+ "color-eyre",
+ "dhat",
+ "divan",
+ "glam",
+ "itertools",
+ "map-parse",
+ "miette",
+ "nom",
+ "nom-supreme",
+ "nom_locate",
+ "rayon",
+ "rstest",
+ "rstest_reuse",
+ "test-log",
+ "thiserror 1.0.69",
+ "tracing",
+ "tracing-subscriber",
+ "tracing-tracy",
+ "tracy-client",
+ "tracy-client-sys",
+]
+
+[[package]]
 name = "aoc2"
 version = "0.1.0"
 dependencies = [
