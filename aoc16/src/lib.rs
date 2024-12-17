@@ -1,11 +1,12 @@
 use std::{
-    collections::{HashMap, VecDeque},
+    collections::{HashMap, HashSet, VecDeque},
     hash::Hash,
+    thread::current,
 };
 
 use glam::IVec2;
 use map_parse::Parseable;
-use nom::{branch::alt, bytes::complete::tag, Parser as _};
+use nom::{branch::alt, bytes::complete::tag, sequence::preceded, Parser as _};
 use nom_supreme::ParserExt as _;
 
 #[derive(thiserror::Error, Debug, PartialEq)]
@@ -46,6 +47,38 @@ struct Input {
     maze: map_parse::Map<Cell>,
     start: IVec2,
     end: IVec2,
+}
+
+impl Input {
+    fn compute_walk_back_count(
+        &self,
+        position: IVec2,
+        direction: Direction,
+        route_costs: &HashMap<(IVec2, Direction), usize>,
+        seen: &mut HashSet<IVec2>,
+    ) {
+        seen.insert(position);
+
+        if position == self.start {
+            return;
+        }
+
+        // figure out what the current cost is
+        let current_cost = route_costs.get(&(position, direction)).expect("has cost");
+
+        // we can "walk back" or turn. See what works
+        let choices = [
+            (position - direction.vec(), direction, current_cost - 1),
+            (position, direction.turn_left(), current_cost - 1000),
+            (position, direction.turn_right(), current_cost - 1000),
+        ];
+
+        for (p, d, c) in choices {
+            if route_costs.get(&(p, d)) == Some(&c) {
+                self.compute_walk_back_count(p, d, route_costs, seen);
+            }
+        }
+    }
 }
 
 fn parse_input(s: &str) -> Result<Input, InputParseError> {
@@ -166,7 +199,54 @@ pub fn part1(input: &str) -> color_eyre::Result<usize> {
 pub fn part2(input: &str) -> color_eyre::Result<usize> {
     let input = parse_input(input)?;
 
-    todo!();
+    // fill up the cost from the start
+    let mut to_check = VecDeque::new();
+    let mut route_costs = HashMap::new();
+
+    route_costs.insert((input.start, Direction::E), 0);
+    to_check.push_back((input.start, Direction::E, 0));
+
+    while let Some((pos, heading, cost)) = to_check.pop_front() {
+        let next_choices = [
+            (pos + heading.vec(), heading, cost + 1),
+            (pos, heading.turn_left(), cost + 1000),
+            (pos, heading.turn_right(), cost + 1000),
+        ];
+
+        for (next_pos, next_heading, next_cost) in next_choices {
+            if input.maze.get(&next_pos).unwrap_or(&Cell::Wall) == &Cell::Wall {
+                continue;
+            }
+
+            if match route_costs.get(&(next_pos, next_heading)) {
+                None => true,
+                Some(value) if *value > next_cost => true,
+                _ => false,
+            } {
+                to_check.push_back((next_pos, next_heading, next_cost));
+                route_costs.insert((next_pos, next_heading), next_cost);
+            }
+        }
+    }
+
+    let mut best_direction = Direction::N;
+    let mut best_cost = route_costs
+        .get(&(input.end, Direction::N))
+        .expect("has value");
+
+    for d in [Direction::S, Direction::E, Direction::W] {
+        let c = route_costs.get(&(input.end, d)).expect("has value");
+        if c < best_cost {
+            best_cost = c;
+            best_direction = d;
+        }
+    }
+
+    let mut seen = HashSet::new();
+
+    input.compute_walk_back_count(input.end, best_direction, &route_costs, &mut seen);
+
+    Ok(seen.len())
 }
 
 #[cfg(test)]
@@ -188,11 +268,17 @@ mod tests {
             part1(include_str!("../example.txt")).expect("success"),
             7036
         );
+
+        assert_eq!(
+            part1(include_str!("../example2.txt")).expect("success"),
+            11048
+        );
     }
 
     #[test]
     fn test_part2() {
         init_tests();
-        assert_eq!(part2(include_str!("../example.txt")).expect("success"), 0);
+        assert_eq!(part2(include_str!("../example.txt")).expect("success"), 45);
+        assert_eq!(part2(include_str!("../example2.txt")).expect("success"), 64);
     }
 }
