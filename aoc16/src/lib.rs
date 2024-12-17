@@ -1,12 +1,11 @@
 use std::{
     collections::{HashMap, HashSet, VecDeque},
     hash::Hash,
-    thread::current,
 };
 
 use glam::IVec2;
 use map_parse::Parseable;
-use nom::{branch::alt, bytes::complete::tag, sequence::preceded, Parser as _};
+use nom::{branch::alt, bytes::complete::tag, Parser as _};
 use nom_supreme::ParserExt as _;
 
 #[derive(thiserror::Error, Debug, PartialEq)]
