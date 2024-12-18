@@ -24,6 +24,9 @@ enum InputParseError {
 
     #[error("Failed to decode instructions: exactly 2 bytes needed")]
     InvalidDecodeLength,
+
+    #[error("Part 2 takes a very long time ({0:?} iterations already)")]
+    TakesTooLong(u64),
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -102,6 +105,17 @@ enum Instruction {
     DivisionC(ComboOperand), // Register<C/2> = Register<A/0> div 2^OPERAND, truncated integer
 }
 
+impl Instruction {
+    fn from_array(value: &[u8]) -> Result<Vec<Instruction>, InputParseError> {
+        let mut result = Vec::with_capacity(value.len() / 2);
+        for chunk in value.chunks_exact(2) {
+            result.push(Instruction::try_from(chunk)?);
+        }
+
+        Ok(result)
+    }
+}
+
 impl TryFrom<&[u8]> for Instruction {
     type Error = InputParseError;
 
@@ -168,10 +182,11 @@ impl Registers {
     }
 }
 
-#[derive(Default, Debug)]
+#[derive(Default, Debug, Clone)]
 struct Program {
     registers: Registers,
     instructions: Vec<Instruction>,
+    raw_program: Vec<u8>,
 }
 
 impl Program {
@@ -183,6 +198,31 @@ impl Program {
             }
         }
         output_vec
+    }
+
+    fn run_and_outputs(&mut self, mut expected: &[u8], max_steps: usize) -> bool {
+        let mut step = 0;
+        while let Some(instruction) = self.instructions.get(self.registers.pc) {
+            step += 1;
+            if step > max_steps {
+                // TOO MANY ITERATIONS, maybe an infinite loop
+                return false;
+            }
+
+            if let Some(output) = self.registers.perform(*instruction) {
+                // we have an output
+                match expected.split_first() {
+                    Some((x, rest)) if *x as u64 == output => {
+                        expected = rest;
+                        if expected.is_empty() {
+                            return true; // done output
+                        }
+                    }
+                    _ => return false,
+                }
+            }
+        }
+        false
     }
 }
 
@@ -201,12 +241,13 @@ fn parse_input(s: &str) -> Result<Program, InputParseError> {
             .preceded_by(tag("Program: "))
             .terminated(many0(line_ending)),
     ))
-    .map(|(a, b, c, instruction_vec)| Program {
+    .map(|(a, b, c, raw_program)| Program {
         registers: Registers::new([a, b, c], 0),
-        instructions: instruction_vec
+        instructions: raw_program
             .chunks_exact(2)
             .map(|v| Instruction::try_from(v).expect("valid instruction"))
             .collect(),
+        raw_program,
     })
     .parse(s)?;
 
@@ -229,10 +270,30 @@ pub fn part1(input: &str) -> color_eyre::Result<Vec<u64>> {
     Ok(program.run())
 }
 
-pub fn part2(input: &str) -> color_eyre::Result<usize> {
-    let input = parse_input(input)?;
+pub fn part2(input: &str) -> color_eyre::Result<u64> {
+    let program = parse_input(input)?;
 
-    todo!();
+    let original_instructions = program.raw_program.clone();
+
+    let mut a_value = 0;
+
+    loop {
+        let mut other_program = program.clone();
+        other_program.registers.values[0] = a_value;
+
+        const MAX_ITERATIONS: usize = 1000;
+        if other_program.run_and_outputs(&original_instructions, MAX_ITERATIONS) {
+            return Ok(a_value);
+        }
+
+        // TODO: expect output somehow? also figure out when we terminate!
+
+        a_value += 1;
+
+        if a_value > 1000000 {
+            Err(InputParseError::TakesTooLong(a_value))?;
+        }
+    }
 }
 
 #[cfg(test)]
@@ -266,6 +327,7 @@ mod tests {
                     .chunks_exact(2)
                     .map(|v| Instruction::try_from(v).expect("valid instruction"))
                     .collect(),
+                raw_program: vec![], // do not care
             };
 
             assert_eq!(program.run(), vec![0, 1, 2]);
@@ -279,6 +341,7 @@ mod tests {
                     .chunks_exact(2)
                     .map(|v| Instruction::try_from(v).expect("valid instruction"))
                     .collect(),
+                raw_program: vec![], // do not care
             };
 
             assert_eq!(program.run(), vec![4, 2, 5, 6, 7, 7, 7, 7, 3, 1, 0]);
@@ -292,6 +355,7 @@ mod tests {
                     .chunks_exact(2)
                     .map(|v| Instruction::try_from(v).expect("valid instruction"))
                     .collect(),
+                raw_program: vec![], // do not care
             };
 
             assert_eq!(program.run(), vec![]);
@@ -305,6 +369,7 @@ mod tests {
                     .chunks_exact(2)
                     .map(|v| Instruction::try_from(v).expect("valid instruction"))
                     .collect(),
+                raw_program: vec![], // do not care
             };
 
             assert_eq!(program.run(), vec![]);
@@ -324,6 +389,9 @@ mod tests {
     #[test]
     fn test_part2() {
         init_tests();
-        assert_eq!(part2(include_str!("../example.txt")).expect("success"), 0);
+        assert_eq!(
+            part2(include_str!("../example2.txt")).expect("success"),
+            117440
+        );
     }
 }

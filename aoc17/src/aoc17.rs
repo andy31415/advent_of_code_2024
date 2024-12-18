@@ -28,8 +28,8 @@ fn main() -> color_eyre::eyre::Result<()> {
     }
     println!();
 
-    // let s2 = aoc17::part2(include_str!("../input.txt"))?;
-    // println!("Part 2: {}", s2);
+    let s2 = aoc17::part2(include_str!("../input.txt"))?;
+    println!("Part 2: {}", s2);
 
     Ok(())
 }
