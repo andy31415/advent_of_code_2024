@@ -1,3 +1,5 @@
+use std::{collections::HashMap, fmt::Display};
+
 use nom::{
     bytes::complete::tag,
     character::complete::{self, line_ending},
@@ -48,6 +50,13 @@ impl LiteralOperand {
     }
 }
 
+impl Display for LiteralOperand {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let LiteralOperand::Value(v) = self;
+        f.write_fmt(format_args!("{}", v))
+    }
+}
+
 impl TryFrom<u8> for ComboOperand {
     type Error = InputParseError;
 
@@ -94,6 +103,20 @@ impl ComboOperand {
     }
 }
 
+impl Display for ComboOperand {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ComboOperand::Value(v) => f.write_fmt(format_args!("{}", v)),
+            ComboOperand::Register(r) => match r {
+                0 => f.write_str("A"),
+                1 => f.write_str("B"),
+                2 => f.write_str("C"),
+                n => f.write_fmt(format_args!("Register<{}>", n)),
+            },
+        }
+    }
+}
+
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 enum Instruction {
     DivisionA(ComboOperand), // Register<A/0> = Register<A/0> div 2^OPERAND, truncated integer
@@ -104,6 +127,35 @@ enum Instruction {
     Out(ComboOperand),       // OUTPUT OPERAND mod 8
     DivisionB(ComboOperand), // Register<B/1> = Register<A/0> div 2^OPERAND, truncated integer
     DivisionC(ComboOperand), // Register<C/2> = Register<A/0> div 2^OPERAND, truncated integer
+}
+
+impl Display for Instruction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Instruction::DivisionA(combo_operand) => {
+                f.write_fmt(format_args!("A = A / (1 << {})", combo_operand))
+            }
+            Instruction::BitwiseXorB(literal_operand) => {
+                f.write_fmt(format_args!("B ^= {}", literal_operand))
+            }
+            Instruction::Modulo8(combo_operand) => {
+                f.write_fmt(format_args!("B = {} % 8", combo_operand))
+            }
+            Instruction::JumpIfNotZero(literal_operand) => {
+                f.write_fmt(format_args!("IF A != 0 JMP {}", literal_operand))
+            }
+            Instruction::BitwiseXorC => f.write_str("B ^= C"),
+            Instruction::Out(combo_operand) => {
+                f.write_fmt(format_args!("OUT({} % 8)", combo_operand))
+            }
+            Instruction::DivisionB(combo_operand) => {
+                f.write_fmt(format_args!("B = A / (1 << {})", combo_operand))
+            }
+            Instruction::DivisionC(combo_operand) => {
+                f.write_fmt(format_args!("C = A / (1 << {})", combo_operand))
+            }
+        }
+    }
 }
 
 impl Instruction {
@@ -300,49 +352,104 @@ pub fn part1(input: &str) -> color_eyre::Result<Vec<u128>> {
 pub fn part2(input: &str) -> color_eyre::Result<u128> {
     let program = parse_input(input)?;
 
-    let original_instructions = program.raw_program.clone();
+    /* THIS TAKES TOO LONG
 
-    // SPEED: 10M will run in 40 seconds (36.5 really)
-    //   const MAX_RANGE: u128 = 10_000_000_000;
-    const MAX_RANGE: u128 = 1_000_000_000;
+        let original_instructions = program.raw_program.clone();
 
-    // What I found:
-    //   - outputs start at multiples of 4194304 (offset -91974)
-    //   - outputs work for 6 steps:
-    //      N, N+1, N+5, N+320, N+321, N+324
-    //
-    // Step 2:
-    //  419338426 + (n * 1073741824)
-    //    and N, N+1, N+5, n+320, N+321
-    //
-    // There is a VERY large jump at 138320058 (from 66754746)
+        // SPEED: 10M will run in 40 seconds (36.5 really)
+        //   const MAX_RANGE: u128 = 10_000_000_000;
+        const MAX_RANGE: u128 = 100_000_000_000;
 
-    Ok((0..MAX_RANGE)
-        //.into_par_iter()
-        // .find_any(|a_value| {
-        .find(|idx| {
-            let mut other_program = program.clone();
+        // What I found:
+        //   - outputs start at multiples of 4_194_304 (offset -91974)
+        //   - outputs work for 6 steps:
+        //      N, N+1, N+5, N+320, N+321, N+324
+        //
+        // Step 2:
+        //  419_338_426 + (n * 1_073_741_824)
+        //    and N, N+1, N+5, n+320, N+321
+        //
+        // There is a VERY large jump at 138_320_058 (from 66_754_746)
 
-            // compute a value here based in our logic
-            let a_value = 419338426
-                + (idx / 4) * 1073741824
-                + match idx % 4 {
-                    0 => 0,
-                    1 => 1,
-                    2 => 5,
-                    3 => 320,
-                    4 => 321,
-                    _ => unreachable!(),
-                };
+        Ok((0..MAX_RANGE)
+            .into_par_iter()
+            .find_any(|idx| {
+                //.find(|idx| {
+                let mut other_program = program.clone();
 
-            // println!("TRYING: {}", a_value);
+                // compute a value here based in our logic
+                let a_value = 419338426
+                    + (idx / 4) * 1073741824
+                    + match idx % 4 {
+                        0 => 0,
+                        1 => 1,
+                        2 => 5,
+                        3 => 320,
+                        4 => 321,
+                        _ => unreachable!(),
+                    };
 
-            other_program.registers.values[0] = a_value;
+                // println!("TRYING: {}", a_value);
 
-            const MAX_ITERATIONS: usize = 200;
-            other_program.run_and_outputs(&original_instructions, MAX_ITERATIONS)
-        })
-        .ok_or(InputParseError::TakesTooLong(MAX_RANGE))?)
+                other_program.registers.values[0] = a_value;
+
+                const MAX_ITERATIONS: usize = 200;
+                other_program.run_and_outputs(&original_instructions, MAX_ITERATIONS)
+            })
+            .ok_or(InputParseError::TakesTooLong(MAX_RANGE))?)
+    */
+
+    tracing::info!("PROGRAM:");
+    for (idx, i) in program.instructions.iter().enumerate() {
+        tracing::info!("    {}: {:#}", idx, i);
+    }
+    /* My program: 2,4,1,1,7,5,0,3,4,3,1,6,5,5,3,0 */
+    /* 0xE168A31B0      => 7,5,0,3,4,3,1,6,5,5,3,0 */
+
+    let mut other = program.clone();
+    // other.registers.values[0] = 0xE168A31B0;
+    // 0xE168A31B0
+    other.registers.values[0] = 247839529320442;
+    tracing::info!(
+        "MY TEST: 0x{:X} => {:?}",
+        other.registers.values[0].clone(),
+        other.run()
+    );
+
+    let mut final_a = 0;
+    for len in 1..=program.raw_program.len() {
+        let (_, suffix) = program
+            .raw_program
+            .as_slice()
+            .split_at(program.raw_program.len() - len);
+        tracing::info!("Looking for {:?}", suffix);
+
+        // try to get the program to output v first
+        let mut found_a = None;
+
+        for t in 0..=0b111 {
+            let test_a = (final_a << 3) | t;
+            let mut other = program.clone();
+            other.registers.values[0] = test_a;
+            let partial_output = other.run().iter().map(|v| *v as u8).collect::<Vec<_>>();
+            tracing::info!(
+                "OUTPUT FROM {:b} == 0x{:X} is {:?}",
+                test_a,
+                test_a,
+                partial_output
+            );
+            if partial_output == suffix {
+                tracing::info!("FOUND IT!");
+                found_a = Some(test_a);
+                break;
+            }
+        }
+        match found_a {
+            Some(value) => final_a = value,
+            None => panic!("Could not actually find a useful A here ..."),
+        }
+    }
+    Ok(final_a)
 }
 
 #[cfg(test)]
