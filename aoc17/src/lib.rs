@@ -7,16 +7,20 @@ enum InputParseError {
     UnparsedData(String),
 }
 
-struct Input {}
+enum Instruction {}
 
-fn parse_input(s: &str) -> Result<Input, InputParseError> {
+struct Program {
+    instructions: Vec<Instruction>,
+}
+
+fn parse_input(s: &str) -> Result<Program, InputParseError> {
     let rest = s;
 
     if !rest.is_empty() {
         return Err(InputParseError::UnparsedData(rest.into()));
     }
 
-    Ok(Input {})
+    Ok(Program {})
 }
 
 impl<INNER: Into<String>> From<nom::Err<nom::error::Error<INNER>>> for InputParseError {
