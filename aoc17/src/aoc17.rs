@@ -12,17 +12,24 @@ fn main() -> color_eyre::eyre::Result<()> {
     color_eyre::install()?;
 
     let stdout_log = tracing_subscriber::fmt::layer().compact();
-    
+
     tracing_subscriber::registry()
         .with(stdout_log)
         .with(EnvFilter::from_default_env())
         .init();
 
     let s1 = aoc17::part1(include_str!("../input.txt"))?;
-    println!("Part 1: {}", s1);
+    print!("Part 1: ");
+    for (idx, value) in s1.iter().enumerate() {
+        if idx != 0 {
+            print!(",");
+        }
+        print!("{}", value);
+    }
+    println!();
 
-    let s2 = aoc17::part2(include_str!("../input.txt"))?;
-    println!("Part 2: {}", s2);
+    // let s2 = aoc17::part2(include_str!("../input.txt"))?;
+    // println!("Part 2: {}", s2);
 
     Ok(())
 }
