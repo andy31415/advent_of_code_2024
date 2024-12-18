@@ -407,48 +407,61 @@ pub fn part2(input: &str) -> color_eyre::Result<u128> {
     /* 0xE168A31B0      => 7,5,0,3,4,3,1,6,5,5,3,0 */
 
     let mut other = program.clone();
-    // other.registers.values[0] = 0xE168A31B0;
-    // 0xE168A31B0
-    other.registers.values[0] = 247839529320442;
+    other.registers.values[0] = 0xE168A31B0;
     tracing::info!(
         "MY TEST: 0x{:X} => {:?}",
         other.registers.values[0].clone(),
         other.run()
     );
+    tracing::info!("TARGET:     {:?}", program.raw_program);
 
     let mut final_a = 0;
+    // brute force the last 12 bits
+    for suffix in 0..=0b11_1111_1111 {
+        final_a = (0xE168A31B0 << 12) | suffix;
+        let mut other = program.clone();
+        other.registers.values[0] = final_a;
 
-    let goal = program.raw_program.clone();
-
-    for len in 1..=goal.len() {
-        let (_, suffix) = goal.as_slice().split_at(goal.len() - len);
-        tracing::info!("Looking for {:?}", suffix);
-
-        // try to get the program to output v first
-        let mut found_a = None;
-
-        for t in 0..=0b111 {
-            let test_a = (final_a << 3) | t;
-            let mut other = program.clone();
-            other.registers.values[0] = test_a;
-            let partial_output = other.run().iter().map(|v| *v as u8).collect::<Vec<_>>();
-            tracing::info!(
-                "OUTPUT FROM {:b} == 0x{:X} is {:?}",
-                test_a,
-                test_a,
-                partial_output
-            );
-            if partial_output == suffix {
-                tracing::info!("FOUND IT!");
-                found_a = Some(test_a);
-                break;
-            }
-        }
-        match found_a {
-            Some(value) => final_a = value,
-            None => panic!("Could not actually find a useful A here ..."),
+        let test_output = other.run().iter().map(|v| *v as u8).collect::<Vec<_>>();
+        if test_output == program.raw_program {
+            println!("FOUND IT: 0x{:X} == {}", final_a, final_a);
+            break;
         }
     }
+
+    /*
+        let goal = program.raw_program.clone();
+
+        for len in 1..=goal.len() {
+            let (_, suffix) = goal.as_slice().split_at(goal.len() - len);
+            tracing::info!("Looking for {:?}", suffix);
+
+            // try to get the program to output v first
+            let mut found_a = None;
+
+            for t in 0..=0b111 {
+                let test_a = (final_a << 3) | t;
+                let mut other = program.clone();
+                other.registers.values[0] = test_a;
+                let partial_output = other.run().iter().map(|v| *v as u8).collect::<Vec<_>>();
+                tracing::info!(
+                    "OUTPUT FROM {:b} == 0x{:X} is {:?}",
+                    test_a,
+                    test_a,
+                    partial_output
+                );
+                if partial_output == suffix {
+                    tracing::info!("FOUND IT!");
+                    found_a = Some(test_a);
+                    break;
+                }
+            }
+            match found_a {
+                Some(value) => final_a = value,
+                None => panic!("Could not actually find a useful A here ..."),
+            }
+        }
+    */
     Ok(final_a)
 }
 
