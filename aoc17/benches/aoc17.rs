@@ -7,10 +7,10 @@ fn main() {
 
 #[divan::bench]
 fn part1() {
-    aoc17::part1(black_box(include_str!("../input.txt")));
+    aoc17::part1(black_box(include_str!("../input.txt"))).unwrap();
 }
 
 #[divan::bench]
 fn part2() {
-    aoc17::part2(black_box(include_str!("../input.txt")));
+    aoc17::part2(black_box(include_str!("../input.txt"))).unwrap();
 }
