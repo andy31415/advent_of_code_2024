@@ -417,11 +417,11 @@ pub fn part2(input: &str) -> color_eyre::Result<u128> {
     );
 
     let mut final_a = 0;
-    for len in 1..=program.raw_program.len() {
-        let (_, suffix) = program
-            .raw_program
-            .as_slice()
-            .split_at(program.raw_program.len() - len);
+
+    let goal = program.raw_program.clone();
+
+    for len in 1..=goal.len() {
+        let (_, suffix) = goal.as_slice().split_at(goal.len() - len);
         tracing::info!("Looking for {:?}", suffix);
 
         // try to get the program to output v first
