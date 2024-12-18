@@ -1,14 +1,14 @@
-use std::{collections::HashMap, fmt::Display};
+use std::fmt::Display;
 
 use nom::{
     bytes::complete::tag,
     character::complete::{self, line_ending},
     multi::{many0, many1, separated_list1},
-    sequence::{self, tuple},
+    sequence::{tuple},
     Parser as _,
 };
 use nom_supreme::ParserExt;
-use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use rayon::iter::ParallelIterator;
 use rayon::prelude::*;
 
 #[derive(thiserror::Error, Debug, PartialEq)]
@@ -80,16 +80,13 @@ impl Registers {
         Self { values, pc }
     }
 
-    fn RegisterA(&self) -> u128 {
+    fn register_a(&self) -> u128 {
         self.values[0]
     }
-    fn RegisterB(&self) -> u128 {
+    fn register_b(&self) -> u128 {
         self.values[1]
     }
-    fn RegisterC(&self) -> u128 {
-        self.values[2]
-    }
-    fn ProgramCounter(&self) -> usize {
+    fn program_counter(&self) -> usize {
         self.pc
     }
 }
@@ -155,17 +152,6 @@ impl Display for Instruction {
                 f.write_fmt(format_args!("C = A / (1 << {})", combo_operand))
             }
         }
-    }
-}
-
-impl Instruction {
-    fn from_array(value: &[u8]) -> Result<Vec<Instruction>, InputParseError> {
-        let mut result = Vec::with_capacity(value.len() / 2);
-        for chunk in value.chunks_exact(2) {
-            result.push(Instruction::try_from(chunk)?);
-        }
-
-        Ok(result)
     }
 }
 
@@ -252,57 +238,6 @@ impl Program {
         }
         output_vec
     }
-
-    fn run_and_outputs(&mut self, mut expected: &[u8], max_steps: usize) -> bool {
-        let start_a = self.registers.RegisterA();
-        let mut match_count = 0;
-
-        const OUTPUT_THRESHOLD: usize = 8;
-
-        let mut step = 0;
-        while let Some(instruction) = self.instructions.get(self.registers.pc) {
-            step += 1;
-            if step > max_steps {
-                // TOO MANY ITERATIONS, maybe an infinite loop
-                if match_count > OUTPUT_THRESHOLD {
-                    println!(
-                        "MATCHED {} instances on {} - AND RAN TOO LONG",
-                        match_count, start_a
-                    );
-                }
-                return false;
-            }
-
-            if let Some(output) = self.registers.perform(*instruction) {
-                // we have an output
-                match expected.split_first() {
-                    Some((x, rest)) if *x as u128 == output => {
-                        match_count += 1;
-                        expected = rest;
-                        if expected.is_empty() {
-                            return true; // done output
-                        }
-                    }
-                    _ => {
-                        if match_count > OUTPUT_THRESHOLD {
-                            println!(
-                                "MATCHED {} instances on {} - AND OUTPUTS WRONG VALUE",
-                                match_count, start_a
-                            );
-                        }
-                        return false;
-                    }
-                }
-            }
-        }
-        if match_count > OUTPUT_THRESHOLD {
-            println!(
-                "MATCHED {} instances on {} - AND STOPPED",
-                match_count, start_a
-            );
-        }
-        false
-    }
 }
 
 fn parse_input(s: &str) -> Result<Program, InputParseError> {
@@ -349,120 +284,51 @@ pub fn part1(input: &str) -> color_eyre::Result<Vec<u128>> {
     Ok(program.run())
 }
 
+#[tracing::instrument(ret)]
+pub fn find(start_program: &Program, target: &[u8]) -> Vec<u128> {
+    // find the output for the smaller chunks, then append a prefix
+    let (first, rest) = match target.split_first() {
+        Some((a, b)) => (a, b),
+        None => return vec![0], // Empty target
+    };
+
+    let mut choices = Vec::new();
+
+    for partial in find(start_program, rest) {
+        for suffix in 0..8 {
+            let choice = (partial << 3) | suffix;
+
+            let mut other = start_program.clone();
+            other.registers.values[0] = choice;
+            let result = other.run().iter().map(|v| *v as u8).collect::<Vec<_>>();
+
+            if result == target {
+                choices.push(choice);
+            }
+        }
+    }
+
+    choices
+}
+
 pub fn part2(input: &str) -> color_eyre::Result<u128> {
     let program = parse_input(input)?;
-
-    /* THIS TAKES TOO LONG
-
-        let original_instructions = program.raw_program.clone();
-
-        // SPEED: 10M will run in 40 seconds (36.5 really)
-        //   const MAX_RANGE: u128 = 10_000_000_000;
-        const MAX_RANGE: u128 = 100_000_000_000;
-
-        // What I found:
-        //   - outputs start at multiples of 4_194_304 (offset -91974)
-        //   - outputs work for 6 steps:
-        //      N, N+1, N+5, N+320, N+321, N+324
-        //
-        // Step 2:
-        //  419_338_426 + (n * 1_073_741_824)
-        //    and N, N+1, N+5, n+320, N+321
-        //
-        // There is a VERY large jump at 138_320_058 (from 66_754_746)
-
-        Ok((0..MAX_RANGE)
-            .into_par_iter()
-            .find_any(|idx| {
-                //.find(|idx| {
-                let mut other_program = program.clone();
-
-                // compute a value here based in our logic
-                let a_value = 419338426
-                    + (idx / 4) * 1073741824
-                    + match idx % 4 {
-                        0 => 0,
-                        1 => 1,
-                        2 => 5,
-                        3 => 320,
-                        4 => 321,
-                        _ => unreachable!(),
-                    };
-
-                // println!("TRYING: {}", a_value);
-
-                other_program.registers.values[0] = a_value;
-
-                const MAX_ITERATIONS: usize = 200;
-                other_program.run_and_outputs(&original_instructions, MAX_ITERATIONS)
-            })
-            .ok_or(InputParseError::TakesTooLong(MAX_RANGE))?)
-    */
 
     tracing::info!("PROGRAM:");
     for (idx, i) in program.instructions.iter().enumerate() {
         tracing::info!("    {}: {:#}", idx, i);
     }
-    /* My program: 2,4,1,1,7,5,0,3,4,3,1,6,5,5,3,0 */
-    /* 0xE168A31B0      => 7,5,0,3,4,3,1,6,5,5,3,0 */
 
-    let mut other = program.clone();
-    other.registers.values[0] = 0xE168A31B0;
-    tracing::info!(
-        "MY TEST: 0x{:X} => {:?}",
-        other.registers.values[0].clone(),
-        other.run()
-    );
-    tracing::info!("TARGET:     {:?}", program.raw_program);
-
-    let mut final_a = 0;
-    // brute force the last 12 bits
-    for suffix in 0..=0b11_1111_1111 {
-        final_a = (0xE168A31B0 << 12) | suffix;
-        let mut other = program.clone();
-        other.registers.values[0] = final_a;
-
-        let test_output = other.run().iter().map(|v| *v as u8).collect::<Vec<_>>();
-        if test_output == program.raw_program {
-            println!("FOUND IT: 0x{:X} == {}", final_a, final_a);
-            break;
-        }
-    }
-
-    /*
-        let goal = program.raw_program.clone();
-
-        for len in 1..=goal.len() {
-            let (_, suffix) = goal.as_slice().split_at(goal.len() - len);
-            tracing::info!("Looking for {:?}", suffix);
-
-            // try to get the program to output v first
-            let mut found_a = None;
-
-            for t in 0..=0b111 {
-                let test_a = (final_a << 3) | t;
-                let mut other = program.clone();
-                other.registers.values[0] = test_a;
-                let partial_output = other.run().iter().map(|v| *v as u8).collect::<Vec<_>>();
-                tracing::info!(
-                    "OUTPUT FROM {:b} == 0x{:X} is {:?}",
-                    test_a,
-                    test_a,
-                    partial_output
-                );
-                if partial_output == suffix {
-                    tracing::info!("FOUND IT!");
-                    found_a = Some(test_a);
-                    break;
-                }
-            }
-            match found_a {
-                Some(value) => final_a = value,
-                None => panic!("Could not actually find a useful A here ..."),
-            }
-        }
-    */
-    Ok(final_a)
+    Ok(*find(
+        &program,
+        &program
+            .raw_program
+            .iter().copied()
+            .collect::<Vec<_>>(),
+    )
+    .iter()
+    .min()
+    .expect("Has a solution"))
 }
 
 #[cfg(test)]
@@ -485,8 +351,8 @@ mod tests {
                 r.perform([2u8, 6u8].as_ref().try_into().expect("valid instruction")),
                 None
             );
-            assert_eq!(r.RegisterB(), 1);
-            assert_eq!(r.ProgramCounter(), 1);
+            assert_eq!(r.register_b(), 1);
+            assert_eq!(r.program_counter(), 1);
         }
 
         {
@@ -500,7 +366,7 @@ mod tests {
             };
 
             assert_eq!(program.run(), vec![0, 1, 2]);
-            assert_eq!(program.registers.ProgramCounter(), 3);
+            assert_eq!(program.registers.program_counter(), 3);
         }
 
         {
@@ -514,7 +380,7 @@ mod tests {
             };
 
             assert_eq!(program.run(), vec![4, 2, 5, 6, 7, 7, 7, 7, 3, 1, 0]);
-            assert_eq!(program.registers.RegisterA(), 0);
+            assert_eq!(program.registers.register_a(), 0);
         }
 
         {
@@ -528,7 +394,7 @@ mod tests {
             };
 
             assert_eq!(program.run(), vec![]);
-            assert_eq!(program.registers.RegisterB(), 26);
+            assert_eq!(program.registers.register_b(), 26);
         }
 
         {
@@ -542,7 +408,7 @@ mod tests {
             };
 
             assert_eq!(program.run(), vec![]);
-            assert_eq!(program.registers.RegisterB(), 44354);
+            assert_eq!(program.registers.register_b(), 44354);
         }
     }
 
