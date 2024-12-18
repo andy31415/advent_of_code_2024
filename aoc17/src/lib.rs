@@ -281,7 +281,7 @@ pub fn part2(input: &str) -> color_eyre::Result<u64> {
         let mut other_program = program.clone();
         other_program.registers.values[0] = a_value;
 
-        const MAX_ITERATIONS: usize = 1000;
+        const MAX_ITERATIONS: usize = 200;
         if other_program.run_and_outputs(&original_instructions, MAX_ITERATIONS) {
             return Ok(a_value);
         }
@@ -290,7 +290,7 @@ pub fn part2(input: &str) -> color_eyre::Result<u64> {
 
         a_value += 1;
 
-        if a_value > 1000000 {
+        if a_value > 1_000_000_000_00 {
             Err(InputParseError::TakesTooLong(a_value))?;
         }
     }
