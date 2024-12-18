@@ -1,4 +1,3 @@
-use itertools::Itertools;
 use nom::{
     bytes::complete::tag,
     character::complete::{self, line_ending},
@@ -7,6 +6,8 @@ use nom::{
     Parser as _,
 };
 use nom_supreme::ParserExt;
+use rayon::iter::{IntoParallelIterator, ParallelIterator};
+use rayon::prelude::*;
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 enum InputParseError {
@@ -26,7 +27,7 @@ enum InputParseError {
     InvalidDecodeLength,
 
     #[error("Part 2 takes a very long time ({0:?} iterations already)")]
-    TakesTooLong(u64),
+    TakesTooLong(u128),
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -41,9 +42,9 @@ enum LiteralOperand {
 }
 
 impl LiteralOperand {
-    fn value(&self) -> u64 {
+    fn value(&self) -> u128 {
         let LiteralOperand::Value(v) = self;
-        *v as u64
+        *v as u128
     }
 }
 
@@ -61,22 +62,22 @@ impl TryFrom<u8> for ComboOperand {
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, Default)]
 struct Registers {
-    values: [u64; 3],
+    values: [u128; 3],
     pc: usize,
 }
 
 impl Registers {
-    fn new(values: [u64; 3], pc: usize) -> Self {
+    fn new(values: [u128; 3], pc: usize) -> Self {
         Self { values, pc }
     }
 
-    fn RegisterA(&self) -> u64 {
+    fn RegisterA(&self) -> u128 {
         self.values[0]
     }
-    fn RegisterB(&self) -> u64 {
+    fn RegisterB(&self) -> u128 {
         self.values[1]
     }
-    fn RegisterC(&self) -> u64 {
+    fn RegisterC(&self) -> u128 {
         self.values[2]
     }
     fn ProgramCounter(&self) -> usize {
@@ -85,9 +86,9 @@ impl Registers {
 }
 
 impl ComboOperand {
-    fn value(&self, registers: &[u64]) -> u64 {
+    fn value(&self, registers: &[u128]) -> u128 {
         match self {
-            ComboOperand::Value(x) => *x as u64,
+            ComboOperand::Value(x) => *x as u128,
             ComboOperand::Register(n) => registers[*n as usize],
         }
     }
@@ -139,7 +140,7 @@ impl TryFrom<&[u8]> for Instruction {
 
 impl Registers {
     // perform the operation and return an optional outpu
-    fn perform(&mut self, instruction: Instruction) -> Option<u64> {
+    fn perform(&mut self, instruction: Instruction) -> Option<u128> {
         match instruction {
             Instruction::DivisionA(combo_operand) => {
                 self.values[0] /= 1 << combo_operand.value(&self.values);
@@ -190,7 +191,7 @@ struct Program {
 }
 
 impl Program {
-    fn run(&mut self) -> Vec<u64> {
+    fn run(&mut self) -> Vec<u128> {
         let mut output_vec = Vec::new();
         while let Some(instruction) = self.instructions.get(self.registers.pc) {
             if let Some(output) = self.registers.perform(*instruction) {
@@ -201,26 +202,52 @@ impl Program {
     }
 
     fn run_and_outputs(&mut self, mut expected: &[u8], max_steps: usize) -> bool {
+        let start_a = self.registers.RegisterA();
+        let mut match_count = 0;
+
+        const OUTPUT_THRESHOLD: usize = 8;
+
         let mut step = 0;
         while let Some(instruction) = self.instructions.get(self.registers.pc) {
             step += 1;
             if step > max_steps {
                 // TOO MANY ITERATIONS, maybe an infinite loop
+                if match_count > OUTPUT_THRESHOLD {
+                    println!(
+                        "MATCHED {} instances on {} - AND RAN TOO LONG",
+                        match_count, start_a
+                    );
+                }
                 return false;
             }
 
             if let Some(output) = self.registers.perform(*instruction) {
                 // we have an output
                 match expected.split_first() {
-                    Some((x, rest)) if *x as u64 == output => {
+                    Some((x, rest)) if *x as u128 == output => {
+                        match_count += 1;
                         expected = rest;
                         if expected.is_empty() {
                             return true; // done output
                         }
                     }
-                    _ => return false,
+                    _ => {
+                        if match_count > OUTPUT_THRESHOLD {
+                            println!(
+                                "MATCHED {} instances on {} - AND OUTPUTS WRONG VALUE",
+                                match_count, start_a
+                            );
+                        }
+                        return false;
+                    }
                 }
             }
+        }
+        if match_count > OUTPUT_THRESHOLD {
+            println!(
+                "MATCHED {} instances on {} - AND STOPPED",
+                match_count, start_a
+            );
         }
         false
     }
@@ -228,13 +255,13 @@ impl Program {
 
 fn parse_input(s: &str) -> Result<Program, InputParseError> {
     let (rest, program) = tuple((
-        complete::u64
+        complete::u128
             .preceded_by(tag("Register A: "))
             .terminated(line_ending),
-        complete::u64
+        complete::u128
             .preceded_by(tag("Register B: "))
             .terminated(line_ending),
-        complete::u64
+        complete::u128
             .preceded_by(tag("Register C: "))
             .terminated(many1(line_ending)),
         separated_list1(tag(","), complete::u8)
@@ -264,36 +291,58 @@ impl<INNER: Into<String>> From<nom::Err<nom::error::Error<INNER>>> for InputPars
     }
 }
 
-pub fn part1(input: &str) -> color_eyre::Result<Vec<u64>> {
+pub fn part1(input: &str) -> color_eyre::Result<Vec<u128>> {
     let mut program = parse_input(input)?;
 
     Ok(program.run())
 }
 
-pub fn part2(input: &str) -> color_eyre::Result<u64> {
+pub fn part2(input: &str) -> color_eyre::Result<u128> {
     let program = parse_input(input)?;
 
     let original_instructions = program.raw_program.clone();
 
-    let mut a_value = 0;
+    // SPEED: 10M will run in 40 seconds (36.5 really)
+    //   const MAX_RANGE: u128 = 10_000_000_000;
+    const MAX_RANGE: u128 = 1_000_000_000;
 
-    loop {
-        let mut other_program = program.clone();
-        other_program.registers.values[0] = a_value;
+    // What I found:
+    //   - outputs start at multiples of 4194304 (offset -91974)
+    //   - outputs work for 6 steps:
+    //      N, N+1, N+5, N+320, N+321, N+324
+    //
+    // Step 2:
+    //  419338426 + (n * 1073741824)
+    //    and N, N+1, N+5, n+320, N+321
+    //
+    // There is a VERY large jump at 138320058 (from 66754746)
 
-        const MAX_ITERATIONS: usize = 200;
-        if other_program.run_and_outputs(&original_instructions, MAX_ITERATIONS) {
-            return Ok(a_value);
-        }
+    Ok((0..MAX_RANGE)
+        //.into_par_iter()
+        // .find_any(|a_value| {
+        .find(|idx| {
+            let mut other_program = program.clone();
 
-        // TODO: expect output somehow? also figure out when we terminate!
+            // compute a value here based in our logic
+            let a_value = 419338426
+                + (idx / 4) * 1073741824
+                + match idx % 4 {
+                    0 => 0,
+                    1 => 1,
+                    2 => 5,
+                    3 => 320,
+                    4 => 321,
+                    _ => unreachable!(),
+                };
 
-        a_value += 1;
+            // println!("TRYING: {}", a_value);
 
-        if a_value > 1_000_000_000_00 {
-            Err(InputParseError::TakesTooLong(a_value))?;
-        }
-    }
+            other_program.registers.values[0] = a_value;
+
+            const MAX_ITERATIONS: usize = 200;
+            other_program.run_and_outputs(&original_instructions, MAX_ITERATIONS)
+        })
+        .ok_or(InputParseError::TakesTooLong(MAX_RANGE))?)
 }
 
 #[cfg(test)]
