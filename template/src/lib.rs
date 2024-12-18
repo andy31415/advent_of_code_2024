@@ -16,7 +16,7 @@ fn parse_input(s: &str) -> Result<Input, InputParseError> {
         return Err(InputParseError::UnparsedData(rest.into()));
     }
 
-    Ok({ Input })
+    Ok(Input {})
 }
 
 impl<INNER: Into<String>> From<nom::Err<nom::error::Error<INNER>>> for InputParseError {
@@ -26,13 +26,13 @@ impl<INNER: Into<String>> From<nom::Err<nom::error::Error<INNER>>> for InputPars
 }
 
 pub fn part1(input: &str) -> color_eyre::Result<usize> {
-    let mut input = parse_input(s)?;
+    let mut input = parse_input(input)?;
 
     todo!();
 }
 
 pub fn part2(input: &str) -> color_eyre::Result<usize> {
-    let mut input = parse_input(s)?;
+    let mut input = parse_input(input)?;
 
     todo!();
 }
