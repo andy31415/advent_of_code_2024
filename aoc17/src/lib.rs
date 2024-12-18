@@ -4,12 +4,10 @@ use nom::{
     bytes::complete::tag,
     character::complete::{self, line_ending},
     multi::{many0, many1, separated_list1},
-    sequence::{tuple},
+    sequence::tuple,
     Parser as _,
 };
 use nom_supreme::ParserExt;
-use rayon::iter::ParallelIterator;
-use rayon::prelude::*;
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 enum InputParseError {
@@ -27,9 +25,6 @@ enum InputParseError {
 
     #[error("Failed to decode instructions: exactly 2 bytes needed")]
     InvalidDecodeLength,
-
-    #[error("Part 2 takes a very long time ({0:?} iterations already)")]
-    TakesTooLong(u128),
 }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
@@ -78,16 +73,6 @@ struct Registers {
 impl Registers {
     fn new(values: [u128; 3], pc: usize) -> Self {
         Self { values, pc }
-    }
-
-    fn register_a(&self) -> u128 {
-        self.values[0]
-    }
-    fn register_b(&self) -> u128 {
-        self.values[1]
-    }
-    fn program_counter(&self) -> usize {
-        self.pc
     }
 }
 
@@ -287,7 +272,7 @@ pub fn part1(input: &str) -> color_eyre::Result<Vec<u128>> {
 #[tracing::instrument(ret)]
 pub fn find(start_program: &Program, target: &[u8]) -> Vec<u128> {
     // find the output for the smaller chunks, then append a prefix
-    let (first, rest) = match target.split_first() {
+    let (_, rest) = match target.split_first() {
         Some((a, b)) => (a, b),
         None => return vec![0], // Empty target
     };
@@ -319,16 +304,10 @@ pub fn part2(input: &str) -> color_eyre::Result<u128> {
         tracing::info!("    {}: {:#}", idx, i);
     }
 
-    Ok(*find(
-        &program,
-        &program
-            .raw_program
-            .iter().copied()
-            .collect::<Vec<_>>(),
-    )
-    .iter()
-    .min()
-    .expect("Has a solution"))
+    Ok(*find(&program, &program.raw_program.to_vec())
+        .iter()
+        .min()
+        .expect("Has a solution"))
 }
 
 #[cfg(test)]
@@ -351,8 +330,8 @@ mod tests {
                 r.perform([2u8, 6u8].as_ref().try_into().expect("valid instruction")),
                 None
             );
-            assert_eq!(r.register_b(), 1);
-            assert_eq!(r.program_counter(), 1);
+            assert_eq!(r.values[1], 1);
+            assert_eq!(r.pc, 1);
         }
 
         {
@@ -366,7 +345,7 @@ mod tests {
             };
 
             assert_eq!(program.run(), vec![0, 1, 2]);
-            assert_eq!(program.registers.program_counter(), 3);
+            assert_eq!(program.registers.pc, 3);
         }
 
         {
@@ -380,7 +359,7 @@ mod tests {
             };
 
             assert_eq!(program.run(), vec![4, 2, 5, 6, 7, 7, 7, 7, 3, 1, 0]);
-            assert_eq!(program.registers.register_a(), 0);
+            assert_eq!(program.registers.values[0], 0);
         }
 
         {
@@ -394,7 +373,7 @@ mod tests {
             };
 
             assert_eq!(program.run(), vec![]);
-            assert_eq!(program.registers.register_b(), 26);
+            assert_eq!(program.registers.values[1], 26);
         }
 
         {
@@ -408,7 +387,7 @@ mod tests {
             };
 
             assert_eq!(program.run(), vec![]);
-            assert_eq!(program.registers.register_b(), 44354);
+            assert_eq!(program.registers.values[1], 44354);
         }
     }
 
