@@ -1,4 +1,4 @@
-use std::collections::HashSet;
+use std::{collections::HashSet, hash::Hash};
 
 use glam::IVec2;
 use nom::{branch::alt, bytes::complete::tag, character::complete::satisfy, Parser};
@@ -12,7 +12,7 @@ enum InputParseError {
     #[error("Unparsed data remained: {0:?}")]
     UnparsedData(String),
 }
-use pathfinding::prelude::dijkstra;
+use pathfinding::prelude::{dijkstra, dijkstra_all};
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Copy, Clone, Hash, Debug)]
 enum Cell {
@@ -81,36 +81,157 @@ impl<INNER: Into<String>> From<nom::Err<nom::error::Error<INNER>>> for InputPars
     }
 }
 
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+struct RacePosition {
+    pos: IVec2,
+    cheat: Option<(IVec2, IVec2)>,
+}
+
+impl RacePosition {
+    fn without_cheats(pos: IVec2) -> Self {
+        Self { pos, cheat: None }
+    }
+
+    fn plain_successors(
+        &self,
+        walls: &HashSet<IVec2>,
+        rows: usize,
+        cols: usize,
+    ) -> Vec<RacePosition> {
+        [(0, 1), (0, -1), (1, 0), (-1, 0)]
+            .into_iter()
+            .map(|(x, y)| self.pos + IVec2::new(x, y))
+            .filter(|p| {
+                p.x >= 0
+                    && (p.x as usize) < cols
+                    && p.y >= 0
+                    && (p.y as usize) < rows
+                    && !walls.contains(p)
+            })
+            .map(|pos| RacePosition {
+                pos,
+                cheat: self.cheat,
+            })
+            .collect::<Vec<_>>()
+    }
+
+    fn cheat_successors(
+        &self,
+        walls: &HashSet<IVec2>,
+        rows: usize,
+        cols: usize,
+        banned_cheats: &HashSet<(IVec2, IVec2)>,
+    ) -> Vec<RacePosition> {
+        let mut result = Vec::new();
+        for pos in [(0, 1), (0, -1), (1, 0), (-1, 0)]
+            .into_iter()
+            .map(|(x, y)| self.pos + IVec2::new(x, y))
+            .filter(|p| p.x >= 0 && (p.x as usize) < cols && p.y >= 0 && (p.y as usize) < rows)
+        {
+            if !walls.contains(&pos) {
+                result.push(RacePosition {
+                    pos,
+                    cheat: self.cheat,
+                });
+            } else {
+                // this is inside a wall ... can we cheat?
+                // attempt to move double and see what happens
+                if self.cheat.is_some() {
+                    continue;
+                }
+
+                // teleport-pos
+                let end_pos = self.pos + (self.pos - pos);
+                if walls.contains(&end_pos) {
+                    continue;
+                }
+
+                if banned_cheats.contains(&(self.pos, end_pos)) {
+                    continue; // cheat already considered
+                }
+                println!("CAN CHEAT {} TO {}", pos, end_pos);
+
+                result.push(RacePosition {
+                    pos: end_pos,
+                    cheat: Some((self.pos, end_pos)),
+                });
+            }
+        }
+        result
+    }
+}
+
 pub fn part1(input: &str) -> color_eyre::Result<usize> {
-    let mut input = parse_input(input)?;
+    let input = parse_input(input)?;
 
     let start_cost = dijkstra(
-        &input.start,
+        &RacePosition::without_cheats(input.start),
         |start| {
-            [(0, 1), (0, -1), (1, 0), (-1, 0)]
-                .into_iter()
-                .map(|(x, y)| start + IVec2::new(x, y))
-                .filter(|p| {
-                    p.x >= 0 && (p.x as usize) < input.cols && p.y >= 0 && (p.y as usize) < input.rows && !input.walls.contains(p)
-                })
-                .map(|p| (p, 1))
+            start
+                .plain_successors(&input.walls, input.rows, input.cols)
+                .iter()
+                .map(|p| (*p, p.cheat.map(|c| 2).unwrap_or(1)))
                 .collect::<Vec<_>>()
         },
-        |x| x == &input.end,
+        |x| x.pos == input.end,
     )
     .expect("Has path")
     .1;
 
-    println!("START COST: {}", start_cost);
-    // FIXME: dijskstra first, figure out cost
+    tracing::info!("START COST: {}", start_cost);
 
-    todo!();
+    let mut banned_cheats = HashSet::new();
+    let mut saves = 0;
+
+    loop {
+        println!("SEARCHING...");
+        // see what happens if we cheat
+        let path = dijkstra(
+            &RacePosition::without_cheats(input.start),
+            |start| {
+                start
+                    .cheat_successors(&input.walls, input.rows, input.cols, &banned_cheats)
+                    .iter()
+                    .map(|p| (*p, 1))
+                    .collect::<Vec<_>>()
+            },
+            |x| x.pos == input.end,
+        )
+        .expect("Has path");
+
+        println!(
+            "FOUND CHEAT PATH length : {:#?} (saving {})",
+            path.1,
+            start_cost - path.1
+        );
+
+        // if start_cost - path.1 <= 100 {
+        //     break;
+        // }
+        if start_cost - path.1 == 0 {
+            break;
+        }
+
+        println!(
+            "FOUND CHEAT PATH length : {:#?} (saving {})",
+            path.1,
+            start_cost - path.1
+        );
+        saves += 1;
+
+        // ban the cheat used
+        for p in path.0.iter().filter_map(|p| p.cheat) {
+            banned_cheats.insert(p);
+        }
+    }
+
+    Ok(saves)
 }
 
 pub fn part2(input: &str) -> color_eyre::Result<usize> {
     let mut input = parse_input(input)?;
 
-    todo!();
+    Ok(0)
 }
 
 #[cfg(test)]
