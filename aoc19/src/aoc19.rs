@@ -12,7 +12,7 @@ fn main() -> color_eyre::eyre::Result<()> {
     color_eyre::install()?;
 
     let stdout_log = tracing_subscriber::fmt::layer().compact();
-    
+
     tracing_subscriber::registry()
         .with(stdout_log)
         .with(EnvFilter::from_default_env())

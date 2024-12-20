@@ -2,9 +2,9 @@ use std::collections::HashSet;
 
 use nom::{
     bytes::complete::{is_a, tag},
-    character::complete::{line_ending, satisfy},
-    multi::{many0, many1, separated_list1},
-    sequence::{self, tuple},
+    character::complete::line_ending,
+    multi::{many0, separated_list1},
+    sequence::{tuple},
     IResult, Parser as _,
 };
 use nom_supreme::ParserExt;
@@ -120,7 +120,7 @@ pub fn part1(input: &str) -> color_eyre::Result<usize> {
 }
 
 pub fn part2(input: &str) -> color_eyre::Result<usize> {
-    let mut input = parse_input(input)?;
+    let input = parse_input(input)?;
 
     Ok(0)
 }
