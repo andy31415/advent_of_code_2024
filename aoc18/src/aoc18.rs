@@ -21,8 +21,8 @@ fn main() -> color_eyre::eyre::Result<()> {
     let s1 = aoc18::part1(include_str!("../input.txt"), (71, 71).into(), 1024)?;
     println!("Part 1: {}", s1);
 
-    let s2 = aoc18::part2(include_str!("../input.txt"))?;
-    println!("Part 2: {}", s2);
+    let s2 = aoc18::part2(include_str!("../input.txt"), (71, 71).into(), 1024)?;
+    println!("Part 2: {},{}", s2.x, s2.y);
 
     Ok(())
 }

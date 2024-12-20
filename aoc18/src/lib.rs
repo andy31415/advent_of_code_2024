@@ -103,10 +103,60 @@ pub fn part1(input: &str, grid_size: IVec2, simulation: usize) -> color_eyre::Re
     Ok(node_map.map(|(_, len)| len).unwrap_or(0))
 }
 
-pub fn part2(input: &str) -> color_eyre::Result<usize> {
+impl Input {
+    fn has_path(&self, grid_size: IVec2, simulation_size: usize) -> bool {
+        // GRID SIZE: 6x6 OR 70x70
+        let g = Grid {
+            rows: grid_size.y,
+            cols: grid_size.x,
+            blocks: self
+                .positions
+                .iter()
+                .take(simulation_size)
+                .copied()
+                .collect(),
+        };
+
+        let goal = IVec2::new(g.rows - 1, g.cols - 1);
+
+        dijkstra(
+            &IVec2::new(0, 0),
+            |start| {
+                [(0, 1), (0, -1), (1, 0), (-1, 0)]
+                    .into_iter()
+                    .map(|(x, y)| start + IVec2::new(x, y))
+                    .filter(|p| {
+                        p.x >= 0
+                            && p.x < g.cols
+                            && p.y >= 0
+                            && p.y < g.rows
+                            && !g.blocks.contains(p)
+                    })
+                    .map(|p| (p, 1))
+                    .collect::<Vec<_>>()
+            },
+            |x| x == &goal,
+        )
+        .is_some()
+    }
+}
+
+pub fn part2(input: &str, grid_size: IVec2, simulation: usize) -> color_eyre::Result<IVec2> {
     let input = parse_input(input)?;
 
-    todo!();
+    let mut low = 0; // possible
+    let mut high = input.positions.len() + 1; // impossible
+
+    while (high - low) > 1 {
+        let mid = (high + low) / 2;
+
+        if input.has_path(grid_size, mid) {
+            low = mid;
+        } else {
+            high = mid;
+        }
+    }
+    Ok(*input.positions.get(low).expect("valid index"))
 }
 
 #[cfg(test)]
@@ -133,6 +183,9 @@ mod tests {
     #[test]
     fn test_part2() {
         init_tests();
-        assert_eq!(part2(include_str!("../example.txt")).expect("success"), 0);
+        assert_eq!(
+            part2(include_str!("../example.txt"), (7,7).into(), 25).expect("success"),
+            IVec2::new(6, 1)
+        );
     }
 }
