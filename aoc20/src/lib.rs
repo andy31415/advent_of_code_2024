@@ -259,7 +259,99 @@ pub fn part1(input: &str) -> color_eyre::Result<usize> {
 pub fn part2(input: &str) -> color_eyre::Result<usize> {
     let input = parse_input(input)?;
 
-    Ok(0)
+    let start_cost = dijkstra(
+        &RacePosition::without_cheats(input.start),
+        |start| {
+            start
+                .plain_successors(&input.walls, input.rows, input.cols)
+                .iter()
+                .map(|p| (*p, 1))
+                .collect::<Vec<_>>()
+        },
+        |x| x.pos == input.end,
+    )
+    .expect("Has path")
+    .1;
+
+    tracing::info!("START COST: {}", start_cost);
+
+    // logic: find distance to start for ALL walls
+    let mut distance_from_start = HashMap::new();
+    let paths = dijkstra_all(&RacePosition::without_cheats(input.start), |start| {
+        start
+            .plain_successors(&input.walls, input.rows, input.cols)
+            .iter()
+            .map(|p| (*p, 1))
+            .collect::<Vec<_>>()
+    });
+
+    for (pos, (_, len)) in paths.iter() {
+        distance_from_start.insert(pos.pos, *len);
+    }
+    distance_from_start.insert(input.start, 0);
+
+    tracing::info!("Costs calculated calculated!");
+
+    let mut cnt = 0;
+
+    // For every empty space that is near a wall, figure out what to do
+    for x in 0..input.cols as i32 {
+        for y in 0..input.rows as i32 {
+            let start = IVec2::new(x, y);
+            if input.walls.contains(&start) {
+                continue;
+            }
+
+            // at this point, we are allowed to cheat in mahattan distance of up to 20
+            // so this is quite rough...
+            for dx in -20..20 {
+                for dy in -20..20 {
+                    let d = IVec2::new(dx, dy);
+
+                    if dx.abs() + dy.abs() > 20 {
+                        // is this a valid cheat ?
+                        continue;
+                    }
+                    // go to the end, can do walls
+                    let end = start + d;
+                    if input.walls.contains(&end) {
+                        continue;
+                    }
+                    if end.x < 0
+                        || end.x >= input.cols as i32
+                        || end.y < 0
+                        || end.y >= input.rows as i32
+                    {
+                        continue;
+                    }
+
+                    let d_start = match distance_from_start.get(&start) {
+                        Some(value) => value,
+                        None => {
+                            tracing::error!("UNEXPECTED NO DISTANCE FOR {}", start);
+                            continue;
+                        }
+                    };
+                    let d_end = match distance_from_start.get(&end) {
+                        Some(value) => value,
+                        None => {
+                            tracing::error!("UNEXPECTED NO DISTANCE FOR {}", end);
+                            continue;
+                        }
+                    };
+
+                    let saving = (d_end - d_start) - dx.abs() - dy.abs();
+
+                    if saving >= 100 {
+                        tracing::info!("CHECK CHEAT {} -> {}: {}", start, end, saving);
+                        cnt += 1;
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(cnt)
 }
 
 #[cfg(test)]
@@ -274,13 +366,14 @@ mod tests {
         });
     }
 
-    #[test_log::test]
+    //#[test_log::test]
+    #[test]
     fn test_part1() {
         init_tests();
         assert_eq!(part1(include_str!("../example.txt")).expect("success"), 0);
     }
 
-    #[test]
+    #[test_log::test]
     fn test_part2() {
         init_tests();
         assert_eq!(part2(include_str!("../example.txt")).expect("success"), 0);
