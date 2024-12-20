@@ -1,10 +1,10 @@
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use nom::{
     bytes::complete::{is_a, tag},
     character::complete::line_ending,
     multi::{many0, separated_list1},
-    sequence::{tuple},
+    sequence::tuple,
     IResult, Parser as _,
 };
 use nom_supreme::ParserExt;
@@ -65,39 +65,30 @@ impl<INNER: Into<String>> From<nom::Err<nom::error::Error<INNER>>> for InputPars
 #[derive(Default)]
 struct GoalCache {
     choices: Vec<Stripe>,
-    possible: HashSet<String>,
-    impossible: HashSet<String>,
+    build_choices: HashMap<String, usize>,
 }
 
 impl GoalCache {
-    #[tracing::instrument(ret, skip(self))]
-    pub fn can_build(&mut self, goal: &str) -> bool {
+    pub fn can_build(&mut self, goal: &str) -> usize {
         if goal.is_empty() {
-            return true;
+            return 1;
         }
-        if self.possible.contains(goal) {
-            return true;
-        }
-        if self.impossible.contains(goal) {
-            return false;
+        if let Some(&value) = self.build_choices.get(goal) {
+            return value;
         }
 
-        let tails = self
+        let cnt = self
             .choices
             .iter()
             .filter(|a| goal.starts_with(&a.pattern))
             .map(|a| goal.split_at(a.pattern.len()).1)
-            .collect::<Vec<_>>();
+            .collect::<Vec<_>>()
+            .iter()
+            .map(|t| self.can_build(t))
+            .sum();
 
-        for tail in tails {
-            if self.can_build(tail) {
-                self.possible.insert(goal.to_string());
-                return true;
-            }
-        }
-
-        self.impossible.insert(goal.to_string());
-        false
+        self.build_choices.insert(goal.to_string(), cnt);
+        cnt
     }
 }
 
@@ -109,20 +100,26 @@ pub fn part1(input: &str) -> color_eyre::Result<usize> {
         ..Default::default()
     };
 
-    let mut result = 0;
-    for (idx, v) in input.required.iter().enumerate() {
-        if cache.can_build(&v.pattern) {
-            result += 1;
-        }
-    }
-
-    Ok(result)
+    Ok(input
+        .required
+        .iter()
+        .filter(|v| cache.can_build(&v.pattern) > 0)
+        .count())
 }
 
 pub fn part2(input: &str) -> color_eyre::Result<usize> {
     let input = parse_input(input)?;
 
-    Ok(0)
+    let mut cache = GoalCache {
+        choices: input.available,
+        ..Default::default()
+    };
+
+    Ok(input
+        .required
+        .iter()
+        .map(|v| cache.can_build(&v.pattern))
+        .sum())
 }
 
 #[cfg(test)]
@@ -146,6 +143,6 @@ mod tests {
     #[test]
     fn test_part2() {
         init_tests();
-        assert_eq!(part2(include_str!("../example.txt")).expect("success"), 0);
+        assert_eq!(part2(include_str!("../example.txt")).expect("success"), 16);
     }
 }
