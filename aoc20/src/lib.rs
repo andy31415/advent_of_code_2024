@@ -1,4 +1,7 @@
-use std::{collections::HashSet, hash::Hash};
+use std::{
+    collections::{HashMap, HashSet},
+    hash::Hash,
+};
 
 use glam::IVec2;
 use nom::{branch::alt, bytes::complete::tag, character::complete::satisfy, Parser};
@@ -140,8 +143,10 @@ impl RacePosition {
                     continue;
                 }
 
+                // println!("CHEAT TEST FROM {} to {}", self.pos, pos);
                 // teleport-pos
-                let end_pos = self.pos + (self.pos - pos);
+                let end_pos = 2 * pos - self.pos;
+                // println!("  TARGET: {}", end_pos);
                 if walls.contains(&end_pos) {
                     continue;
                 }
@@ -149,7 +154,7 @@ impl RacePosition {
                 if banned_cheats.contains(&(self.pos, end_pos)) {
                     continue; // cheat already considered
                 }
-                println!("CAN CHEAT {} TO {}", pos, end_pos);
+                // println!("CAN CHEAT {} TO {}", self.pos, end_pos);
 
                 result.push(RacePosition {
                     pos: end_pos,
@@ -170,7 +175,7 @@ pub fn part1(input: &str) -> color_eyre::Result<usize> {
             start
                 .plain_successors(&input.walls, input.rows, input.cols)
                 .iter()
-                .map(|p| (*p, p.cheat.map(|c| 2).unwrap_or(1)))
+                .map(|p| (*p, 1))
                 .collect::<Vec<_>>()
         },
         |x| x.pos == input.end,
@@ -180,52 +185,75 @@ pub fn part1(input: &str) -> color_eyre::Result<usize> {
 
     tracing::info!("START COST: {}", start_cost);
 
-    let mut banned_cheats = HashSet::new();
-    let mut saves = 0;
+    // logic: find distance to start for ALL walls
+    let mut distance_from_start = HashMap::new();
+    let paths = dijkstra_all(&RacePosition::without_cheats(input.start), |start| {
+        start
+            .plain_successors(&input.walls, input.rows, input.cols)
+            .iter()
+            .map(|p| (*p, 1))
+            .collect::<Vec<_>>()
+    });
 
-    loop {
-        println!("SEARCHING...");
-        // see what happens if we cheat
-        let path = dijkstra(
-            &RacePosition::without_cheats(input.start),
-            |start| {
-                start
-                    .cheat_successors(&input.walls, input.rows, input.cols, &banned_cheats)
-                    .iter()
-                    .map(|p| (*p, 1))
-                    .collect::<Vec<_>>()
-            },
-            |x| x.pos == input.end,
-        )
-        .expect("Has path");
+    for (pos, (_, len)) in paths.iter() {
+        distance_from_start.insert(pos.pos, *len);
+    }
+    distance_from_start.insert(input.start, 0);
 
-        println!(
-            "FOUND CHEAT PATH length : {:#?} (saving {})",
-            path.1,
-            start_cost - path.1
-        );
+    tracing::info!("Costs calculated calculated!");
 
-        // if start_cost - path.1 <= 100 {
-        //     break;
-        // }
-        if start_cost - path.1 == 0 {
-            break;
-        }
+    let mut cnt = 0;
 
-        println!(
-            "FOUND CHEAT PATH length : {:#?} (saving {})",
-            path.1,
-            start_cost - path.1
-        );
-        saves += 1;
+    // For every empty space that is near a wall, figure out what to do
+    for x in 0..input.cols as i32 {
+        for y in 0..input.rows as i32 {
+            let start = IVec2::new(x, y);
+            if input.walls.contains(&start) {
+                continue;
+            }
+            for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
+                let d = IVec2::new(dx, dy);
+                if !input.walls.contains(&(start + d)) {
+                    continue;
+                }
+                let end = start + 2 * d;
+                if input.walls.contains(&end) {
+                    continue;
+                }
+                if end.x < 0
+                    || end.x >= input.cols as i32
+                    || end.y < 0
+                    || end.y >= input.rows as i32
+                {
+                    continue;
+                }
 
-        // ban the cheat used
-        for p in path.0.iter().filter_map(|p| p.cheat) {
-            banned_cheats.insert(p);
+                let d_start = match distance_from_start.get(&start) {
+                    Some(value) => value,
+                    None => {
+                        tracing::error!("UNEXPECTED NO DISTANCE FOR {}", start);
+                        continue;
+                    }
+                };
+                let d_end = match distance_from_start.get(&end) {
+                    Some(value) => value,
+                    None => {
+                        tracing::error!("UNEXPECTED NO DISTANCE FOR {}", end);
+                        continue;
+                    }
+                };
+
+                let saving = (d_end - d_start) - 2;
+
+                if saving >= 100 {
+                    tracing::info!("CHECK CHEAT {} -> {}: {}", start, end, saving);
+                    cnt += 1;
+                }
+            }
         }
     }
 
-    Ok(saves)
+    Ok(cnt)
 }
 
 pub fn part2(input: &str) -> color_eyre::Result<usize> {
@@ -246,7 +274,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[test_log::test]
     fn test_part1() {
         init_tests();
         assert_eq!(part1(include_str!("../example.txt")).expect("success"), 0);
