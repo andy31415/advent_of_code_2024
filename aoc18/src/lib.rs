@@ -1,7 +1,4 @@
-use std::{
-    collections::HashSet,
-    fmt::{Display, Write},
-};
+use std::{collections::HashSet, fmt::Display};
 
 use glam::IVec2;
 use nom::{
@@ -12,6 +9,7 @@ use nom::{
     Parser as _,
 };
 use nom_supreme::ParserExt;
+use pathfinding::prelude::dijkstra;
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 enum InputParseError {
@@ -72,19 +70,37 @@ impl Display for Grid {
     }
 }
 
-pub fn part1(input: &str) -> color_eyre::Result<usize> {
+pub fn part1(input: &str, grid_size: IVec2, simulation: usize) -> color_eyre::Result<usize> {
     let mut input = parse_input(input)?;
 
     // GRID SIZE: 6x6 OR 70x70
     let g = Grid {
-        rows: 7,
-        cols: 7,
-        blocks: input.positions.into_iter().take(12).collect(),
+        rows: grid_size.y,
+        cols: grid_size.x,
+        blocks: input.positions.into_iter().take(simulation).collect(),
     };
 
-    println!("GRID:\n{}", g);
+    let goal = IVec2::new(g.rows - 1, g.cols - 1);
 
-    todo!();
+    tracing::info!("GRID:\n{}", g);
+    let node_map = dijkstra(
+        &IVec2::new(0, 0),
+        |start| {
+            [(0, 1), (0, -1), (1, 0), (-1, 0)]
+                .into_iter()
+                .map(|(x, y)| start + IVec2::new(x, y))
+                .filter(|p| {
+                    p.x >= 0 && p.x < g.cols && p.y >= 0 && p.y < g.rows && !g.blocks.contains(p)
+                })
+                .map(|p| (p, 1))
+                .collect::<Vec<_>>()
+        },
+        |x| x == &goal,
+    );
+
+    tracing::info!("MAP: {:?}", node_map);
+
+    Ok(node_map.map(|(_, len)| len).unwrap_or(0))
 }
 
 pub fn part2(input: &str) -> color_eyre::Result<usize> {
@@ -108,7 +124,10 @@ mod tests {
     #[test]
     fn test_part1() {
         init_tests();
-        assert_eq!(part1(include_str!("../example.txt")).expect("success"), 0);
+        assert_eq!(
+            part1(include_str!("../example.txt"), (7, 7).into(), 12).expect("success"),
+            22
+        );
     }
 
     #[test]

@@ -12,13 +12,13 @@ fn main() -> color_eyre::eyre::Result<()> {
     color_eyre::install()?;
 
     let stdout_log = tracing_subscriber::fmt::layer().compact();
-    
+
     tracing_subscriber::registry()
         .with(stdout_log)
         .with(EnvFilter::from_default_env())
         .init();
 
-    let s1 = aoc18::part1(include_str!("../input.txt"))?;
+    let s1 = aoc18::part1(include_str!("../input.txt"), (71, 71).into(), 1024)?;
     println!("Part 1: {}", s1);
 
     let s2 = aoc18::part2(include_str!("../input.txt"))?;
