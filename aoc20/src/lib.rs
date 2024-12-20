@@ -4,7 +4,7 @@ use std::{
 };
 
 use glam::IVec2;
-use nom::{branch::alt, bytes::complete::tag, character::complete::satisfy, Parser};
+use nom::{branch::alt, bytes::complete::tag, Parser};
 use nom_supreme::ParserExt;
 
 #[derive(thiserror::Error, Debug, PartialEq)]
@@ -257,7 +257,7 @@ pub fn part1(input: &str) -> color_eyre::Result<usize> {
 }
 
 pub fn part2(input: &str) -> color_eyre::Result<usize> {
-    let mut input = parse_input(input)?;
+    let input = parse_input(input)?;
 
     Ok(0)
 }
