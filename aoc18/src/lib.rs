@@ -184,7 +184,7 @@ mod tests {
     fn test_part2() {
         init_tests();
         assert_eq!(
-            part2(include_str!("../example.txt"), (7,7).into(), 25).expect("success"),
+            part2(include_str!("../example.txt"), (7, 7).into(), 25).expect("success"),
             IVec2::new(6, 1)
         );
     }
