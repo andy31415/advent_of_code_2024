@@ -164,43 +164,51 @@ pub fn part1(input: &str) -> color_eyre::Result<usize> {
             if input.walls.contains(&start) {
                 continue;
             }
-            for (dx, dy) in [(1, 0), (-1, 0), (0, 1), (0, -1)] {
-                let d = IVec2::new(dx, dy);
-                if !input.walls.contains(&(start + d)) {
-                    continue;
-                }
-                let end = start + 2 * d;
-                if input.walls.contains(&end) {
-                    continue;
-                }
-                if end.x < 0
-                    || end.x >= input.cols as i32
-                    || end.y < 0
-                    || end.y >= input.rows as i32
-                {
-                    continue;
-                }
 
-                let d_start = match distance_from_start.get(&start) {
-                    Some(value) => value,
-                    None => {
-                        tracing::error!("UNEXPECTED NO DISTANCE FOR {}", start);
+            // at this point, we are allowed to cheat in mahattan distance of up to 20
+            // so this is quite rough...
+            for dx in -2..=2 {
+                for dy in -2..=2 {
+                    let d = IVec2::new(dx, dy);
+
+                    if dx.unsigned_abs() + dy.unsigned_abs() > 2 {
+                        // is this a valid cheat ?
                         continue;
                     }
-                };
-                let d_end = match distance_from_start.get(&end) {
-                    Some(value) => value,
-                    None => {
-                        tracing::error!("UNEXPECTED NO DISTANCE FOR {}", end);
+                    // go to the end, can do walls
+                    let end = start + d;
+                    if input.walls.contains(&end) {
                         continue;
                     }
-                };
+                    if end.x < 0
+                        || end.x >= input.cols as i32
+                        || end.y < 0
+                        || end.y >= input.rows as i32
+                    {
+                        continue;
+                    }
 
-                let saving = (d_end - d_start) - 2;
+                    let d_start = match distance_from_start.get(&start) {
+                        Some(value) => value,
+                        None => {
+                            tracing::error!("UNEXPECTED NO DISTANCE FOR {}", start);
+                            continue;
+                        }
+                    };
+                    let d_end = match distance_from_start.get(&end) {
+                        Some(value) => value,
+                        None => {
+                            tracing::error!("UNEXPECTED NO DISTANCE FOR {}", end);
+                            continue;
+                        }
+                    };
 
-                if saving >= 100 {
-                    tracing::info!("CHECK CHEAT {} -> {}: {}", start, end, saving);
-                    cnt += 1;
+                    let saving = (d_end - d_start) - dx.abs() - dy.abs();
+
+                    if saving >= 100 {
+                        tracing::info!("CHECK CHEAT {} -> {}: {}", start, end, saving);
+                        cnt += 1;
+                    }
                 }
             }
         }
@@ -257,8 +265,8 @@ pub fn part2(input: &str) -> color_eyre::Result<usize> {
 
             // at this point, we are allowed to cheat in mahattan distance of up to 20
             // so this is quite rough...
-            for dx in -20..20 {
-                for dy in -20..20 {
+            for dx in -20..=20 {
+                for dy in -20..=20 {
                     let d = IVec2::new(dx, dy);
 
                     if dx.abs() + dy.abs() > 20 {
