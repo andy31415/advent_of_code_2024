@@ -7,20 +7,10 @@ fn main() {
 
 #[divan::bench]
 fn part1() {
-    {
-        {
-            project - name
-        }
-    }
-    ::part1(black_box(include_str!("../input.txt"))).unwrap();
+    {{project-name}}::part1(black_box(include_str!("../input.txt"))).unwrap();
 }
 
 #[divan::bench]
 fn part2() {
-    {
-        {
-            project - name
-        }
-    }
-    ::part2(black_box(include_str!("../input.txt"))).unwrap();
+    {{project-name}}::part2(black_box(include_str!("../input.txt"))).unwrap();
 }

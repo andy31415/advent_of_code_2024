@@ -71,7 +71,7 @@ impl Display for Grid {
 }
 
 pub fn part1(input: &str, grid_size: IVec2, simulation: usize) -> color_eyre::Result<usize> {
-    let mut input = parse_input(input)?;
+    let input = parse_input(input)?;
 
     // GRID SIZE: 6x6 OR 70x70
     let g = Grid {
@@ -104,7 +104,7 @@ pub fn part1(input: &str, grid_size: IVec2, simulation: usize) -> color_eyre::Re
 }
 
 pub fn part2(input: &str) -> color_eyre::Result<usize> {
-    let mut input = parse_input(input)?;
+    let input = parse_input(input)?;
 
     todo!();
 }
