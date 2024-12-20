@@ -117,53 +117,6 @@ impl RacePosition {
             })
             .collect::<Vec<_>>()
     }
-
-    fn cheat_successors(
-        &self,
-        walls: &HashSet<IVec2>,
-        rows: usize,
-        cols: usize,
-        banned_cheats: &HashSet<(IVec2, IVec2)>,
-    ) -> Vec<RacePosition> {
-        let mut result = Vec::new();
-        for pos in [(0, 1), (0, -1), (1, 0), (-1, 0)]
-            .into_iter()
-            .map(|(x, y)| self.pos + IVec2::new(x, y))
-            .filter(|p| p.x >= 0 && (p.x as usize) < cols && p.y >= 0 && (p.y as usize) < rows)
-        {
-            if !walls.contains(&pos) {
-                result.push(RacePosition {
-                    pos,
-                    cheat: self.cheat,
-                });
-            } else {
-                // this is inside a wall ... can we cheat?
-                // attempt to move double and see what happens
-                if self.cheat.is_some() {
-                    continue;
-                }
-
-                // println!("CHEAT TEST FROM {} to {}", self.pos, pos);
-                // teleport-pos
-                let end_pos = 2 * pos - self.pos;
-                // println!("  TARGET: {}", end_pos);
-                if walls.contains(&end_pos) {
-                    continue;
-                }
-
-                if banned_cheats.contains(&(self.pos, end_pos)) {
-                    continue; // cheat already considered
-                }
-                // println!("CAN CHEAT {} TO {}", self.pos, end_pos);
-
-                result.push(RacePosition {
-                    pos: end_pos,
-                    cheat: Some((self.pos, end_pos)),
-                });
-            }
-        }
-        result
-    }
 }
 
 pub fn part1(input: &str) -> color_eyre::Result<usize> {
