@@ -1,7 +1,9 @@
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    default,
+};
 
 use glam::IVec2;
-use memoize::memoize;
 use nom::{
     bytes::complete::is_a,
     character::complete::line_ending,
@@ -45,9 +47,13 @@ impl<INNER: Into<String>> From<nom::Err<nom::error::Error<INNER>>> for InputPars
     }
 }
 
+#[derive(Default)]
 struct KeyPad {
     coord: HashMap<char, IVec2>,
     gap: IVec2, // where is the gap in the keyboard
+
+    // cache
+    short_paths_cache: HashMap<String, HashSet<String>>,
 }
 
 impl KeyPad {
@@ -69,6 +75,7 @@ impl KeyPad {
         Self {
             coord,
             gap: IVec2::new(0, 3),
+            ..Default::default()
         }
     }
 
@@ -84,6 +91,7 @@ impl KeyPad {
         Self {
             coord,
             gap: IVec2::new(0, 0),
+            ..Default::default()
         }
     }
 
@@ -121,11 +129,16 @@ impl KeyPad {
         result
     }
 
-    fn short_key_paths(&self, target: &str) -> HashSet<String> {
+    fn short_key_paths(&mut self, target: &str) -> HashSet<String> {
         let mut pos = *self.coord.get(&'A').expect("A has a position");
 
         let mut moves = HashSet::new();
         moves.insert("".to_string());
+
+        match self.short_paths_cache.get(target) {
+            Some(value) => return value.clone(),
+            _ => {}
+        };
 
         for c in target.chars() {
             let dest = *self
@@ -160,6 +173,9 @@ impl KeyPad {
             pos = dest;
         }
 
+        self.short_paths_cache
+            .insert(target.to_string(), moves.clone());
+
         moves
     }
 }
@@ -173,8 +189,8 @@ fn code_number(target: &str) -> usize {
 pub fn part1(input: &str) -> color_eyre::Result<usize> {
     let input = parse_input(input)?;
 
-    let keypad = KeyPad::new_button_pad();
-    let arrow_pad = KeyPad::new_arrow_pad();
+    let mut keypad = KeyPad::new_button_pad();
+    let mut arrow_pad = KeyPad::new_arrow_pad();
 
     Ok(input
         .inputs
@@ -204,7 +220,32 @@ pub fn part1(input: &str) -> color_eyre::Result<usize> {
 pub fn part2(input: &str) -> color_eyre::Result<usize> {
     let input = parse_input(input)?;
 
-    Ok(0)
+    let mut keypad = KeyPad::new_button_pad();
+    let mut arrow_pad = KeyPad::new_arrow_pad();
+
+    Ok(input
+        .inputs
+        .iter()
+        .map(|code| {
+            let number = code_number(code);
+
+            let mut c = keypad.short_key_paths(code);
+            tracing::info!("DEBUG: {}", code);
+            for _ in 0..25 {
+                tracing::info!("    NEXT: {:?}", c.iter().take(3).collect::<Vec<_>>());
+                c = c
+                    .iter()
+                    .flat_map(|x| arrow_pad.short_key_paths(x))
+                    .collect();
+            }
+            tracing::info!("    NEXT: {:?}", c.iter().take(3).collect::<Vec<_>>());
+
+            let mincode = c.iter().map(|s| s.len()).min().expect("Has min");
+
+            tracing::info!("{}: CODE {} and mincode {}", code, number, mincode);
+            number * mincode
+        })
+        .sum())
 }
 
 #[cfg(test)]
