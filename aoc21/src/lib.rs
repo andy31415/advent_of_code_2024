@@ -1,3 +1,6 @@
+use std::{collections::HashMap, hash::Hash};
+
+use glam::IVec2;
 use nom::{
     bytes::complete::is_a,
     character::complete::line_ending,
@@ -41,8 +44,46 @@ impl<INNER: Into<String>> From<nom::Err<nom::error::Error<INNER>>> for InputPars
     }
 }
 
+struct KeyPad {
+    key_coord: HashMap<char, IVec2>,
+    remote_coord: HashMap<char, IVec2>,
+}
+
+impl KeyPad {
+    fn new() -> Self {
+        let mut key_coord = HashMap::new();
+
+        key_coord.insert('7', (0, 0).into());
+        key_coord.insert('8', (1, 0).into());
+        key_coord.insert('9', (2, 0).into());
+        key_coord.insert('4', (0, 1).into());
+        key_coord.insert('5', (1, 1).into());
+        key_coord.insert('6', (2, 2).into());
+        key_coord.insert('1', (0, 2).into());
+        key_coord.insert('2', (1, 2).into());
+        key_coord.insert('3', (2, 2).into());
+        key_coord.insert('0', (1, 3).into());
+        key_coord.insert('A', (2, 3).into());
+
+        let mut remote_coord = HashMap::new();
+
+        remote_coord.insert('^', (1, 0).into());
+        remote_coord.insert('A', (2, 0).into());
+        remote_coord.insert('<', (0, 1).into());
+        remote_coord.insert('v', (1, 1).into());
+        remote_coord.insert('>', (2, 1).into());
+
+        Self {
+            key_coord,
+            remote_coord,
+        }
+    }
+}
+
 pub fn part1(input: &str) -> color_eyre::Result<usize> {
-    let mut input = parse_input(input)?;
+    let input = parse_input(input)?;
+
+    let keypad = KeyPad::new();
 
     println!("INPUT: {:#?}", input);
 
