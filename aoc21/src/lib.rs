@@ -1,3 +1,7 @@
+use nom::{
+    bytes::complete::is_a, character::complete::line_ending, multi::separated_list1, Parser,
+};
+
 #[derive(thiserror::Error, Debug, PartialEq)]
 enum InputParseError {
     #[error("Failed to parse using Nom")]
@@ -7,16 +11,22 @@ enum InputParseError {
     UnparsedData(String),
 }
 
-struct Input {}
+struct Input {
+    inputs: Vec<String>,
+}
 
 fn parse_input(s: &str) -> Result<Input, InputParseError> {
-    let rest = s;
+    let (rest, inputs) = separated_list1(
+        line_ending,
+        is_a("0123456789A").map(|s: &str| s.to_string()),
+    )
+    .parse(s)?;
 
     if !rest.is_empty() {
         return Err(InputParseError::UnparsedData(rest.into()));
     }
 
-    Ok(Input {})
+    Ok(Input { inputs })
 }
 
 impl<INNER: Into<String>> From<nom::Err<nom::error::Error<INNER>>> for InputParseError {
