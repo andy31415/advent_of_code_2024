@@ -1,6 +1,10 @@
 use nom::{
-    bytes::complete::is_a, character::complete::line_ending, multi::separated_list1, Parser,
+    bytes::complete::is_a,
+    character::complete::line_ending,
+    multi::{many0, separated_list1},
+    Parser,
 };
+use nom_supreme::ParserExt;
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 enum InputParseError {
@@ -11,6 +15,7 @@ enum InputParseError {
     UnparsedData(String),
 }
 
+#[derive(Debug)]
 struct Input {
     inputs: Vec<String>,
 }
@@ -20,6 +25,7 @@ fn parse_input(s: &str) -> Result<Input, InputParseError> {
         line_ending,
         is_a("0123456789A").map(|s: &str| s.to_string()),
     )
+    .terminated(many0(line_ending))
     .parse(s)?;
 
     if !rest.is_empty() {
@@ -37,6 +43,8 @@ impl<INNER: Into<String>> From<nom::Err<nom::error::Error<INNER>>> for InputPars
 
 pub fn part1(input: &str) -> color_eyre::Result<usize> {
     let mut input = parse_input(input)?;
+
+    println!("INPUT: {:#?}", input);
 
     todo!();
 }
