@@ -144,10 +144,18 @@ pub fn part1(input: &str) -> color_eyre::Result<usize> {
         .iter()
         .map(|code| {
             let number = code_number(code);
+
+            let mut c = keypad.short_key_path(code);
+            tracing::info!("DEBUG: {}", code);
+            for _ in 0..3 {
+                tracing::info!("    NEXT: {}", c);
+                c = arrow_pad.short_key_path(&c);
+            }
+
             let mincode =
                 arrow_pad.short_key_path(&arrow_pad.short_key_path(&keypad.short_key_path(code)));
 
-            println!("{}: CODE {} and mincode {}", code, number, mincode.len());
+            tracing::info!("{}: CODE {} and mincode {}", code, number, mincode.len());
 
             number * mincode.len()
         })
