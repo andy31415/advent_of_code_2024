@@ -1,6 +1,7 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 
 use glam::IVec2;
+use memoize::memoize;
 use nom::{
     bytes::complete::is_a,
     character::complete::line_ending,
@@ -86,10 +87,45 @@ impl KeyPad {
         }
     }
 
-    fn short_key_path(&self, target: &str) -> String {
+    /// all the shortest paths (max 2 of them) from `from` to `to`
+    /// making sure we do not go over the gap
+    fn shortest_moves(&self, from: IVec2, to: IVec2) -> Vec<String> {
+        let x_moves = if to.x > from.x {
+            vec!['>'; (to.x - from.x) as usize]
+        } else {
+            vec!['<'; (from.x - to.x) as usize]
+        };
+
+        let y_moves = if from.y > to.y {
+            vec!['^'; (from.y - to.y) as usize]
+        } else {
+            vec!['v'; (to.y - from.y) as usize]
+        };
+
+        let mut result = Vec::new();
+
+        if IVec2::new(from.x, to.y) != self.gap {
+            let mut s = String::with_capacity(x_moves.len() + y_moves.len());
+            s.extend(y_moves.iter());
+            s.extend(x_moves.iter());
+            result.push(s);
+        }
+
+        if IVec2::new(to.x, from.y) != self.gap {
+            let mut s = String::with_capacity(x_moves.len() + y_moves.len());
+            s.extend(x_moves.iter());
+            s.extend(y_moves.iter());
+            result.push(s);
+        }
+
+        result
+    }
+
+    fn short_key_paths(&self, target: &str) -> HashSet<String> {
         let mut pos = *self.coord.get(&'A').expect("A has a position");
 
-        let mut moves = String::new();
+        let mut moves = HashSet::new();
+        moves.insert("".to_string());
 
         for c in target.chars() {
             let dest = *self
@@ -97,28 +133,29 @@ impl KeyPad {
                 .get(&c)
                 .unwrap_or_else(|| panic!("{} MUST BE A valid destination", c));
 
-            let x_moves = if dest.x > pos.x {
-                vec!['>'; (dest.x - pos.x) as usize]
-            } else {
-                vec!['<'; (pos.x - dest.x) as usize]
-            };
+            // extend every single move with what we can
+            moves = moves
+                .iter()
+                .flat_map(|m| {
+                    self.shortest_moves(pos, dest)
+                        .iter()
+                        .map(|suffix| {
+                            let mut prefix = m.to_string();
+                            prefix.push_str(suffix);
+                            prefix.push('A');
+                            prefix
+                        })
+                        .collect::<Vec<String>>()
+                })
+                .collect();
 
-            let y_moves = if pos.y > dest.y {
-                vec!['^'; (pos.y - dest.y) as usize]
-            } else {
-                vec!['v'; (dest.y - pos.y) as usize]
-            };
-
-            // figure out how to get there. We do not want to hit the gap
-            if self.gap.y == pos.y {
-                moves.extend(y_moves);
-                moves.extend(x_moves);
-            } else {
-                moves.extend(x_moves);
-                moves.extend(y_moves);
-            }
-
-            moves.push('A');
+            // keep only the shortest paths, otherwise there is no point
+            let minlen = moves.iter().map(|m| m.len()).min().expect("has moves");
+            moves = moves
+                .iter()
+                .filter(|m| m.len() == minlen)
+                .map(|m| m.to_owned())
+                .collect();
 
             pos = dest;
         }
@@ -145,19 +182,21 @@ pub fn part1(input: &str) -> color_eyre::Result<usize> {
         .map(|code| {
             let number = code_number(code);
 
-            let mut c = keypad.short_key_path(code);
+            let mut c = keypad.short_key_paths(code);
             tracing::info!("DEBUG: {}", code);
-            for _ in 0..3 {
-                tracing::info!("    NEXT: {}", c);
-                c = arrow_pad.short_key_path(&c);
+            for _ in 0..2 {
+                tracing::info!("    NEXT: {:?}", c.iter().take(3).collect::<Vec<_>>());
+                c = c
+                    .iter()
+                    .flat_map(|x| arrow_pad.short_key_paths(x))
+                    .collect();
             }
+            tracing::info!("    NEXT: {:?}", c.iter().take(3).collect::<Vec<_>>());
 
-            let mincode =
-                arrow_pad.short_key_path(&arrow_pad.short_key_path(&keypad.short_key_path(code)));
+            let mincode = c.iter().map(|s| s.len()).min().expect("Has min");
 
-            tracing::info!("{}: CODE {} and mincode {}", code, number, mincode.len());
-
-            number * mincode.len()
+            tracing::info!("{}: CODE {} and mincode {}", code, number, mincode);
+            number * mincode
         })
         .sum())
 }
@@ -180,7 +219,7 @@ mod tests {
         });
     }
 
-    #[test]
+    #[test_log::test]
     fn test_part1() {
         init_tests();
         assert_eq!(
