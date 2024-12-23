@@ -1,6 +1,5 @@
 use std::{
     collections::{HashMap, HashSet, VecDeque},
-    default,
     hash::Hash,
 };
 
@@ -54,7 +53,6 @@ impl<INNER: Into<String>> From<nom::Err<nom::error::Error<INNER>>> for Processin
 #[derive(Default)]
 struct KeyPad {
     coord: HashMap<char, IVec2>,
-    pos_to_key: HashMap<IVec2, char>,
     gap: IVec2, // where is the gap in the keyboard
 }
 
@@ -75,7 +73,6 @@ impl KeyPad {
         coord.insert('A', (2, 3).into());
 
         Self {
-            pos_to_key: coord.iter().map(|(k, v)| (*v, *k)).collect(),
             coord,
             gap: IVec2::new(0, 3),
         }
@@ -91,7 +88,6 @@ impl KeyPad {
         coord.insert('>', (2, 1).into());
 
         Self {
-            pos_to_key: coord.iter().map(|(k, v)| (*v, *k)).collect(),
             coord,
             gap: IVec2::new(0, 0),
         }
