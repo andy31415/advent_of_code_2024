@@ -1,5 +1,5 @@
 #[derive(thiserror::Error, Debug, PartialEq)]
-enum InputParseError {
+enum ProcessingError {
     #[error("Failed to parse using Nom")]
     NomError(#[source] nom::Err<nom::error::Error<String>>),
 
@@ -9,19 +9,19 @@ enum InputParseError {
 
 struct Input {}
 
-fn parse_input(s: &str) -> Result<Input, InputParseError> {
+fn parse_input(s: &str) -> Result<Input, ProcessingError> {
     let rest = s;
 
     if !rest.is_empty() {
-        return Err(InputParseError::UnparsedData(rest.into()));
+        return Err(ProcessingError::UnparsedData(rest.into()));
     }
 
     Ok(Input {})
 }
 
-impl<INNER: Into<String>> From<nom::Err<nom::error::Error<INNER>>> for InputParseError {
+impl<INNER: Into<String>> From<nom::Err<nom::error::Error<INNER>>> for ProcessingError {
     fn from(value: nom::Err<nom::error::Error<INNER>>) -> Self {
-        InputParseError::NomError(value.map_input(|i| i.into()))
+        ProcessingError::NomError(value.map_input(|i| i.into()))
     }
 }
 
