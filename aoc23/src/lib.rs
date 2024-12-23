@@ -8,10 +8,7 @@ use nom::{
     Parser,
 };
 use nom_supreme::ParserExt;
-use petgraph::{
-    dot::{Config, Dot},
-    graph::{NodeIndex, UnGraph},
-};
+use petgraph::graph::{NodeIndex, UnGraph};
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 enum ProcessingError {
@@ -124,8 +121,6 @@ pub fn part2(input: &str) -> color_eyre::Result<String> {
             }
         }
         if large_set.len() > best_len {
-            println!("SOME SET: {}, {:?}", large_set.len(), large_set);
-
             best_len = large_set.len();
             best_set = large_set;
         }
