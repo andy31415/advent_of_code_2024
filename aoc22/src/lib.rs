@@ -35,9 +35,9 @@ impl<INNER: Into<String>> From<nom::Err<nom::error::Error<INNER>>> for Processin
 fn next(value: u32) -> u32 {
     let value = ((value << 6) ^ value) & 0xFF_FFFF;
     let value = ((value >> 5) ^ value) & 0xFF_FFFF;
-    let value = ((value << 11) ^ value) & 0xFF_FFFF;
+    
 
-    value
+    ((value << 11) ^ value) & 0xFF_FFFF
 }
 
 fn nth_next(value: u32, cnt: u32) -> u32 {
