@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use nom::{
     character::complete::{self, line_ending},
     multi::{many0, separated_list1},
@@ -35,7 +37,6 @@ impl<INNER: Into<String>> From<nom::Err<nom::error::Error<INNER>>> for Processin
 fn next(value: u32) -> u32 {
     let value = ((value << 6) ^ value) & 0xFF_FFFF;
     let value = ((value >> 5) ^ value) & 0xFF_FFFF;
-    
 
     ((value << 11) ^ value) & 0xFF_FFFF
 }
@@ -59,10 +60,65 @@ pub fn part1(input: &str) -> color_eyre::Result<usize> {
     Ok(cnt)
 }
 
+#[derive(Hash, PartialEq, Eq, Debug, PartialOrd, Default, Copy, Clone)]
+struct Seq {
+    a: i32,
+    b: i32,
+    c: i32,
+    d: i32,
+}
+
+impl Seq {
+    fn push(&mut self, val: i32) {
+        self.a = self.b;
+        self.b = self.c;
+        self.c = self.d;
+        self.d = val;
+    }
+
+    fn delta(&self, v: u32, n: u32) -> i32 {
+        ((n % 10) as i32 - (v % 10) as i32) % 10
+    }
+
+    fn push_next(&mut self, v: u32, n: u32) {
+        self.push(self.delta(v, n))
+    }
+}
+
 pub fn part2(input: &str) -> color_eyre::Result<u32> {
     let input = parse_input(input)?;
 
-    Ok(0)
+    let mut seq_wins = HashMap::new();
+
+    for x in input {
+        // need: all sequences of 5 numbers in the first 2000 steps
+        let mut first_per_seq = HashMap::new();
+
+        let mut seq = Seq {
+            ..Default::default()
+        };
+
+        let mut v = x;
+        for cnt in 0..=2000 {
+            let n = next(v);
+            let win = n % 10;
+
+            seq.push_next(v, n);
+
+            if cnt >= 3 {
+                // we have enough numbers to check
+                first_per_seq.entry(seq).or_insert(win);
+            }
+            v = n;
+        }
+
+        for (k, v) in first_per_seq.iter() {
+            seq_wins.entry(*k).and_modify(|x| *x += *v).or_insert(*v);
+        }
+    }
+    let m = *seq_wins.values().max().expect("some value");
+
+    Ok(m)
 }
 
 #[cfg(test)]
@@ -97,6 +153,6 @@ mod tests {
     #[test]
     fn test_part2() {
         init_tests();
-        assert_eq!(part2(include_str!("../example.txt")).expect("success"), 0);
+        assert_eq!(part2(include_str!("../example2.txt")).expect("success"), 23);
     }
 }
