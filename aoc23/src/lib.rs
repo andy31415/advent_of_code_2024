@@ -8,7 +8,10 @@ use nom::{
     Parser,
 };
 use nom_supreme::ParserExt;
-use petgraph::graph::{NodeIndex, UnGraph};
+use petgraph::{
+    dot::{Config, Dot},
+    graph::{NodeIndex, UnGraph},
+};
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 enum ProcessingError {
@@ -94,10 +97,55 @@ pub fn part1(input: &str) -> color_eyre::Result<usize> {
     Ok(interconnected.len())
 }
 
-pub fn part2(input: &str) -> color_eyre::Result<usize> {
+pub fn part2(input: &str) -> color_eyre::Result<String> {
     let input = parse_input(input)?;
 
-    todo!();
+    let mut best_len = 0;
+    let mut best_set = HashSet::new();
+
+    // start with 2 connected computers, and see how large we can make the set, ever
+    for (a_name, a_idx) in input.node_indexes.iter() {
+        let mut large_set = HashSet::from([*a_idx]);
+        let mut found = true;
+
+        while found {
+            found = false;
+
+            for other in input.graph.neighbors(*a_idx) {
+                // find out if this is suitable
+                if large_set
+                    .iter()
+                    .any(|n| input.graph.find_edge(*n, other).is_none())
+                {
+                    continue;
+                }
+                large_set.insert(other);
+                found = true;
+            }
+        }
+        if large_set.len() > best_len {
+            println!("SOME SET: {}, {:?}", large_set.len(), large_set);
+
+            best_len = large_set.len();
+            best_set = large_set;
+        }
+    }
+
+    let mut items = best_set
+        .iter()
+        .map(|idx| input.graph.node_weight(*idx).expect("valid index"))
+        .collect::<Vec<_>>();
+    items.sort();
+
+    let mut result = String::new();
+    for x in items {
+        if !result.is_empty() {
+            result.push(',')
+        }
+        result.push_str(x);
+    }
+
+    Ok(result)
 }
 
 #[cfg(test)]
@@ -121,6 +169,9 @@ mod tests {
     #[test]
     fn test_part2() {
         init_tests();
-        assert_eq!(part2(include_str!("../example.txt")).expect("success"), 0);
+        assert_eq!(
+            part2(include_str!("../example.txt")).expect("success"),
+            "co,de,ka,ta"
+        );
     }
 }
