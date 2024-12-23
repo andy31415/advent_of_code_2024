@@ -37,6 +37,7 @@ tracing-tracy.workspace = true
 tracing = { workspace = true }
 tracy-client-sys.workspace = true
 tracy-client.workspace = true
+petgraph.workspace = true
 
 [dev-dependencies]
 itertools = { workspace = true }
