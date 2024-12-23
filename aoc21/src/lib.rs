@@ -1,6 +1,7 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{HashMap, HashSet, VecDeque},
     default,
+    hash::Hash,
 };
 
 use glam::IVec2;
@@ -13,12 +14,15 @@ use nom::{
 use nom_supreme::ParserExt;
 
 #[derive(thiserror::Error, Debug, PartialEq)]
-enum InputParseError {
+enum ProcessingError {
     #[error("Failed to parse using Nom")]
     NomError(#[source] nom::Err<nom::error::Error<String>>),
 
     #[error("Unparsed data remained: {0:?}")]
     UnparsedData(String),
+
+    #[error("No coordinates for: {0:?} (invalid character?)")]
+    InvalidCharacter(char),
 }
 
 #[derive(Debug)]
@@ -26,7 +30,7 @@ struct Input {
     inputs: Vec<String>,
 }
 
-fn parse_input(s: &str) -> Result<Input, InputParseError> {
+fn parse_input(s: &str) -> Result<Input, ProcessingError> {
     let (rest, inputs) = separated_list1(
         line_ending,
         is_a("0123456789A").map(|s: &str| s.to_string()),
@@ -35,25 +39,23 @@ fn parse_input(s: &str) -> Result<Input, InputParseError> {
     .parse(s)?;
 
     if !rest.is_empty() {
-        return Err(InputParseError::UnparsedData(rest.into()));
+        return Err(ProcessingError::UnparsedData(rest.into()));
     }
 
     Ok(Input { inputs })
 }
 
-impl<INNER: Into<String>> From<nom::Err<nom::error::Error<INNER>>> for InputParseError {
+impl<INNER: Into<String>> From<nom::Err<nom::error::Error<INNER>>> for ProcessingError {
     fn from(value: nom::Err<nom::error::Error<INNER>>) -> Self {
-        InputParseError::NomError(value.map_input(|i| i.into()))
+        ProcessingError::NomError(value.map_input(|i| i.into()))
     }
 }
 
 #[derive(Default)]
 struct KeyPad {
     coord: HashMap<char, IVec2>,
+    pos_to_key: HashMap<IVec2, char>,
     gap: IVec2, // where is the gap in the keyboard
-
-    // cache
-    short_paths_cache: HashMap<String, HashSet<String>>,
 }
 
 impl KeyPad {
@@ -73,9 +75,9 @@ impl KeyPad {
         coord.insert('A', (2, 3).into());
 
         Self {
+            pos_to_key: coord.iter().map(|(k, v)| (*v, *k)).collect(),
             coord,
             gap: IVec2::new(0, 3),
-            ..Default::default()
         }
     }
 
@@ -89,95 +91,103 @@ impl KeyPad {
         coord.insert('>', (2, 1).into());
 
         Self {
+            pos_to_key: coord.iter().map(|(k, v)| (*v, *k)).collect(),
             coord,
             gap: IVec2::new(0, 0),
-            ..Default::default()
         }
     }
 
-    /// all the shortest paths (max 2 of them) from `from` to `to`
-    /// making sure we do not go over the gap
-    fn shortest_moves(&self, from: IVec2, to: IVec2) -> Vec<String> {
-        let x_moves = if to.x > from.x {
-            vec!['>'; (to.x - from.x) as usize]
+    fn all_shortest_paths(&self, from: char, to: char) -> Result<HashSet<String>, ProcessingError> {
+        let from = match self.coord.get(&from) {
+            Some(value) => value,
+            None => return Err(ProcessingError::InvalidCharacter(from)),
+        };
+
+        let to = match self.coord.get(&to) {
+            Some(value) => value,
+            None => return Err(ProcessingError::InvalidCharacter(to)),
+        };
+
+        let mut result = HashSet::new();
+
+        // now find all from/to positions. These are at most 3x4 paths, so hopefully not too many
+        let mut to_check = VecDeque::new();
+        to_check.push_back((*from, "".to_string()));
+
+        while let Some((pos, path)) = to_check.pop_front() {
+            if pos == self.gap {
+                // not allowed to get there
+                continue;
+            }
+            if pos == *to {
+                result.insert(path);
+                continue;
+            }
+
+            // decide how to move
+            if to.x > pos.x {
+                to_check.push_back((pos + IVec2::new(1, 0), path.clone() + ">"));
+            }
+            if to.x < pos.x {
+                to_check.push_back((pos + IVec2::new(-1, 0), path.clone() + "<"));
+            }
+            if to.y > pos.y {
+                to_check.push_back((pos + IVec2::new(0, 1), path.clone() + "v"));
+            }
+            if to.y < pos.y {
+                to_check.push_back((pos + IVec2::new(0, -1), path.clone() + "^"));
+            }
+        }
+
+        Ok(result)
+    }
+}
+
+#[derive(Hash, PartialEq, Eq, Copy, Clone, Debug)]
+struct CacheTarget {
+    from: char,
+    to: char,
+    depth: usize,
+}
+
+#[tracing::instrument(ret, skip(cache, pads))]
+fn short_path_count(code: &str, pads: &[KeyPad], cache: &mut HashMap<CacheTarget, usize>) -> usize {
+    let mut current_pos = 'A'; //we start here
+    let mut cnt = 0;
+
+    let (pad, rest) = match pads.split_first() {
+        Some((a, b)) => (a, b),
+        None => return code.len(),
+    };
+
+    for dest in code.chars() {
+        // try all possible paths and figure out how to get there
+        tracing::info!("GOING FROM {} to {}", current_pos, dest);
+
+        let target = CacheTarget {
+            from: current_pos,
+            to: dest,
+            depth: rest.len(),
+        };
+        if let Some(value) = cache.get(&target) {
+            tracing::info!("CACHE HIT!");
+            cnt += value;
         } else {
-            vec!['<'; (from.x - to.x) as usize]
-        };
-
-        let y_moves = if from.y > to.y {
-            vec!['^'; (from.y - to.y) as usize]
-        } else {
-            vec!['v'; (to.y - from.y) as usize]
-        };
-
-        let mut result = Vec::new();
-
-        if IVec2::new(from.x, to.y) != self.gap {
-            let mut s = String::with_capacity(x_moves.len() + y_moves.len());
-            s.extend(y_moves.iter());
-            s.extend(x_moves.iter());
-            result.push(s);
-        }
-
-        if IVec2::new(to.x, from.y) != self.gap {
-            let mut s = String::with_capacity(x_moves.len() + y_moves.len());
-            s.extend(x_moves.iter());
-            s.extend(y_moves.iter());
-            result.push(s);
-        }
-
-        result
-    }
-
-    fn short_key_paths(&mut self, target: &str) -> HashSet<String> {
-        let mut pos = *self.coord.get(&'A').expect("A has a position");
-
-        let mut moves = HashSet::new();
-        moves.insert("".to_string());
-
-        match self.short_paths_cache.get(target) {
-            Some(value) => return value.clone(),
-            _ => {}
-        };
-
-        for c in target.chars() {
-            let dest = *self
-                .coord
-                .get(&c)
-                .unwrap_or_else(|| panic!("{} MUST BE A valid destination", c));
-
-            // extend every single move with what we can
-            moves = moves
+            let compute = pad
+                .all_shortest_paths(current_pos, dest)
+                .expect("has paths")
                 .iter()
-                .flat_map(|m| {
-                    self.shortest_moves(pos, dest)
-                        .iter()
-                        .map(|suffix| {
-                            let mut prefix = m.to_string();
-                            prefix.push_str(suffix);
-                            prefix.push('A');
-                            prefix
-                        })
-                        .collect::<Vec<String>>()
-                })
-                .collect();
+                .map(|path| short_path_count(&(path.clone() + "A"), rest, cache))
+                .min()
+                .expect("Has some path");
 
-            // keep only the shortest paths, otherwise there is no point
-            let minlen = moves.iter().map(|m| m.len()).min().expect("has moves");
-            moves = moves
-                .iter()
-                .filter(|m| m.len() == minlen)
-                .map(|m| m.to_owned())
-                .collect();
-
-            pos = dest;
+            cache.insert(target, compute);
+            cnt += compute;
         }
 
-        self.short_paths_cache
-            .insert(target.to_string(), moves.clone());
-
-        moves
+        current_pos = dest;
     }
+    cnt
 }
 
 fn code_number(target: &str) -> usize {
@@ -189,30 +199,19 @@ fn code_number(target: &str) -> usize {
 pub fn part1(input: &str) -> color_eyre::Result<usize> {
     let input = parse_input(input)?;
 
-    let mut keypad = KeyPad::new_button_pad();
-    let mut arrow_pad = KeyPad::new_arrow_pad();
+    let mut pads = Vec::new();
+
+    pads.push(KeyPad::new_button_pad());
+    pads.push(KeyPad::new_arrow_pad());
+    pads.push(KeyPad::new_arrow_pad());
 
     Ok(input
         .inputs
         .iter()
         .map(|code| {
             let number = code_number(code);
-
-            let mut c = keypad.short_key_paths(code);
-            tracing::info!("DEBUG: {}", code);
-            for _ in 0..2 {
-                tracing::info!("    NEXT: {:?}", c.iter().take(3).collect::<Vec<_>>());
-                c = c
-                    .iter()
-                    .flat_map(|x| arrow_pad.short_key_paths(x))
-                    .collect();
-            }
-            tracing::info!("    NEXT: {:?}", c.iter().take(3).collect::<Vec<_>>());
-
-            let mincode = c.iter().map(|s| s.len()).min().expect("Has min");
-
-            tracing::info!("{}: CODE {} and mincode {}", code, number, mincode);
-            number * mincode
+            let cnt = short_path_count(code, &pads, &mut HashMap::new());
+            number * cnt
         })
         .sum())
 }
@@ -220,30 +219,20 @@ pub fn part1(input: &str) -> color_eyre::Result<usize> {
 pub fn part2(input: &str) -> color_eyre::Result<usize> {
     let input = parse_input(input)?;
 
-    let mut keypad = KeyPad::new_button_pad();
-    let mut arrow_pad = KeyPad::new_arrow_pad();
+    let mut pads = Vec::new();
+
+    pads.push(KeyPad::new_button_pad());
+    for _ in 0..25 {
+        pads.push(KeyPad::new_arrow_pad());
+    }
 
     Ok(input
         .inputs
         .iter()
         .map(|code| {
             let number = code_number(code);
-
-            let mut c = keypad.short_key_paths(code);
-            tracing::info!("DEBUG: {}", code);
-            for _ in 0..25 {
-                tracing::info!("    NEXT: {:?}", c.iter().take(3).collect::<Vec<_>>());
-                c = c
-                    .iter()
-                    .flat_map(|x| arrow_pad.short_key_paths(x))
-                    .collect();
-            }
-            tracing::info!("    NEXT: {:?}", c.iter().take(3).collect::<Vec<_>>());
-
-            let mincode = c.iter().map(|s| s.len()).min().expect("Has min");
-
-            tracing::info!("{}: CODE {} and mincode {}", code, number, mincode);
-            number * mincode
+            let cnt = short_path_count(code, &pads, &mut HashMap::new());
+            number * cnt
         })
         .sum())
 }
@@ -261,17 +250,40 @@ mod tests {
     }
 
     #[test_log::test]
+    fn test_short_path() {
+        let arrow_pad = KeyPad::new_arrow_pad();
+
+        assert_eq!(
+            arrow_pad.all_shortest_paths('A', '<').expect("ok"),
+            ["<v<".to_string(), "v<<".to_string(),].into()
+        );
+
+        let key_pad = KeyPad::new_button_pad();
+        assert_eq!(
+            key_pad.all_shortest_paths('4', '3').expect("ok"),
+            [">>v".to_string(), ">v>".to_string(), "v>>".to_string(),].into()
+        );
+
+        assert_eq!(
+            key_pad.all_shortest_paths('4', 'A').expect("ok"),
+            [
+                ">>vv".to_string(),
+                ">v>v".to_string(),
+                "v>>v".to_string(),
+                "v>v>".to_string(),
+                ">vv>".to_string(),
+            ]
+            .into()
+        );
+    }
+
+    #[test_log::test]
     fn test_part1() {
         init_tests();
+
         assert_eq!(
             part1(include_str!("../example.txt")).expect("success"),
             126384
         );
-    }
-
-    #[test]
-    fn test_part2() {
-        init_tests();
-        assert_eq!(part2(include_str!("../example.txt")).expect("success"), 0);
     }
 }
