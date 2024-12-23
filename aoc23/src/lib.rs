@@ -3,16 +3,12 @@ use std::collections::{HashMap, HashSet};
 use nom::{
     bytes::complete::{is_not, tag},
     character::complete::line_ending,
-    multi::{many0, separated_list0, separated_list1},
+    multi::{many0, separated_list1},
     sequence::separated_pair,
     Parser,
 };
 use nom_supreme::ParserExt;
-use petgraph::prelude::*;
-use petgraph::{
-    graph::{NodeIndex, UnGraph},
-    visit::GetAdjacencyMatrix,
-};
+use petgraph::graph::{NodeIndex, UnGraph};
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 enum ProcessingError {
@@ -99,7 +95,7 @@ pub fn part1(input: &str) -> color_eyre::Result<usize> {
 }
 
 pub fn part2(input: &str) -> color_eyre::Result<usize> {
-    let mut input = parse_input(input)?;
+    let input = parse_input(input)?;
 
     todo!();
 }
