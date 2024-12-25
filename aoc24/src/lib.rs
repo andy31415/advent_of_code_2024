@@ -211,7 +211,7 @@ impl Executer {
         }
         for id in 0..self.y_bits {
             let key = format!("y{:02}", id);
-            inputs.insert(key, ((x >> id) & 0x01) != 0);
+            inputs.insert(key, ((y >> id) & 0x01) != 0);
         }
 
         let mut result = 0;
