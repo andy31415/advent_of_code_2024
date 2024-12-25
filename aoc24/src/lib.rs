@@ -1,5 +1,6 @@
 use std::collections::HashMap;
 
+use itertools::Itertools;
 use nom::{
     branch::alt,
     bytes::complete::{is_not, tag},
@@ -9,6 +10,7 @@ use nom::{
     IResult, Parser,
 };
 use nom_supreme::ParserExt;
+use rayon::prelude::*;
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 enum ProcessingError {
@@ -34,7 +36,7 @@ struct Gate {
     output: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 struct OperationMapping {
     op1: String,
     op2: String,
@@ -158,18 +160,19 @@ fn solve(
 pub fn part1(input: &str) -> color_eyre::Result<usize> {
     let mut input = parse_input(input)?;
 
-    let mut z_outs = input
+    let z_outs = input
         .gate_map
         .keys()
         .filter(|k| k.starts_with("z"))
+        .sorted()
+        .rev()
         .cloned()
         .collect::<Vec<_>>();
-    z_outs.sort();
 
     let mut result = 0;
-    for z in z_outs.iter().rev() {
+    for z in z_outs {
         result <<= 1;
-        if solve(z, &mut input.inputs, &input.gate_map) {
+        if solve(&z, &mut input.inputs, &input.gate_map) {
             result += 1;
         }
     }
@@ -177,10 +180,77 @@ pub fn part1(input: &str) -> color_eyre::Result<usize> {
     Ok(result)
 }
 
-pub fn part2(input: &str) -> color_eyre::Result<usize> {
-    let mut input = parse_input(input)?;
+struct Executer {
+    x_bits: usize,
+    y_bits: usize,
+    z_bits: usize,
+    gate_map: HashMap<String, OperationMapping>,
+}
 
-    todo!();
+impl Executer {
+    fn from(
+        x_bits: usize,
+        y_bits: usize,
+        z_bits: usize,
+        gate_map: &HashMap<String, OperationMapping>,
+    ) -> Self {
+        Self {
+            x_bits,
+            y_bits,
+            z_bits,
+            gate_map: gate_map.clone(),
+        }
+    }
+
+    fn exec(&self, x: usize, y: usize) -> usize {
+        let mut inputs = HashMap::new();
+
+        for id in 0..self.x_bits {
+            let key = format!("x{:02}", id);
+            inputs.insert(key, ((x >> id) & 0x01) != 0);
+        }
+        for id in 0..self.y_bits {
+            let key = format!("y{:02}", id);
+            inputs.insert(key, ((x >> id) & 0x01) != 0);
+        }
+
+        let mut result = 0;
+        for id in 0..self.z_bits {
+            result <<= 1;
+            let key = format!("z{:02}", id);
+            if solve(&key, &mut inputs, &self.gate_map) {
+                result += 1;
+            }
+        }
+
+        result
+    }
+}
+
+pub fn part2(input: &str) -> color_eyre::Result<String> {
+    let input = parse_input(input)?;
+
+    let x_bits = input.inputs.keys().filter(|k| k.starts_with("x")).count();
+    let y_bits = input.inputs.keys().filter(|k| k.starts_with("y")).count();
+    let z_bits = input.gate_map.keys().filter(|k| k.starts_with("z")).count();
+
+    let adder = Executer::from(x_bits, y_bits, z_bits, &input.gate_map);
+
+    for shift in 0..x_bits {
+        let a = 1 << shift;
+        let b = adder.exec(a, 0);
+
+        if a == b {
+            println!("OK AT {}", shift);
+        }
+
+        let b = adder.exec(0, a);
+        if a == b {
+            println!("OK AT {}", shift);
+        }
+    }
+
+    Ok("".to_string())
 }
 
 #[cfg(test)]
@@ -207,6 +277,9 @@ mod tests {
     #[test]
     fn test_part2() {
         init_tests();
-        assert_eq!(part2(include_str!("../example.txt")).expect("success"), 0);
+        assert_eq!(
+            part2(include_str!("../example.txt")).expect("success"),
+            "z00,z01,z02,z05"
+        );
     }
 }
