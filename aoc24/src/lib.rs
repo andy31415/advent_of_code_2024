@@ -10,7 +10,6 @@ use nom::{
     IResult, Parser,
 };
 use nom_supreme::ParserExt;
-use rayon::prelude::*;
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 enum ProcessingError {
@@ -46,7 +45,6 @@ struct OperationMapping {
 #[derive(Debug)]
 struct Input {
     inputs: HashMap<String, bool>, // 0 == false, 1 == true
-    gates: Vec<Gate>,
     gate_map: HashMap<String, OperationMapping>,
 }
 
@@ -111,11 +109,7 @@ fn parse_input(s: &str) -> Result<Input, ProcessingError> {
             gate_map.insert(g.output.clone(), g.mapping());
         }
 
-        Input {
-            inputs,
-            gates,
-            gate_map,
-        }
+        Input { inputs, gate_map }
     })
     .parse(s)?;
 
