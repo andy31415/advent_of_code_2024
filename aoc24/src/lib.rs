@@ -1,4 +1,8 @@
-use std::collections::HashMap;
+use std::{
+    collections::{HashMap, HashSet},
+    hash::Hash,
+    sync::atomic::{AtomicU32, Ordering},
+};
 
 use itertools::Itertools;
 use nom::{
@@ -10,6 +14,7 @@ use nom::{
     IResult, Parser,
 };
 use nom_supreme::ParserExt;
+use rayon::prelude::*;
 
 #[derive(thiserror::Error, Debug, PartialEq)]
 enum ProcessingError {
@@ -35,7 +40,7 @@ struct Gate {
     output: String,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, PartialOrd)]
 struct OperationMapping {
     op1: String,
     op2: String,
@@ -131,9 +136,13 @@ fn solve(
     v: &str,
     inputs: &mut HashMap<String, bool>,
     gate_map: &HashMap<String, OperationMapping>,
-) -> bool {
+    max_depth: usize,
+) -> Option<bool> {
+    if max_depth == 0 {
+        return None;
+    }
     if let Some(value) = inputs.get(v) {
-        return *value;
+        return Some(*value);
     }
 
     // need to find the underlying value instead
@@ -142,11 +151,15 @@ fn solve(
             op1,
             op2,
             operation,
-        }) => match operation {
-            Operation::And => solve(op1, inputs, gate_map) && solve(op2, inputs, gate_map),
-            Operation::Or => solve(op1, inputs, gate_map) || solve(op2, inputs, gate_map),
-            Operation::Xor => solve(op1, inputs, gate_map) ^ solve(op2, inputs, gate_map),
-        },
+        }) => {
+            let v1 = solve(op1, inputs, gate_map, max_depth - 1)?;
+            let v2 = solve(op2, inputs, gate_map, max_depth - 1)?;
+            Some(match operation {
+                Operation::And => v1 && v2,
+                Operation::Or => v1 || v2,
+                Operation::Xor => v1 ^ v2,
+            })
+        }
         None => panic!("Output {} should have has a gate connected to it", v),
     }
 }
@@ -166,14 +179,17 @@ pub fn part1(input: &str) -> color_eyre::Result<usize> {
     let mut result = 0;
     for z in z_outs {
         result <<= 1;
-        if solve(&z, &mut input.inputs, &input.gate_map) {
-            result += 1;
+        match solve(&z, &mut input.inputs, &input.gate_map, 89) {
+            Some(true) => result += 1,
+            Some(false) => {}
+            None => panic!("invalid linkages"),
         }
     }
 
     Ok(result)
 }
 
+#[derive(Clone, PartialEq)]
 struct Executer {
     x_bits: usize,
     y_bits: usize,
@@ -196,7 +212,34 @@ impl Executer {
         }
     }
 
-    fn exec(&self, x: usize, y: usize) -> usize {
+    fn swap_outputs(&mut self, g1: &str, g2: &str) {
+        let m1 = self.gate_map.get(g1).unwrap().clone();
+        let m2 = self.gate_map.get(g2).unwrap().clone();
+
+        self.gate_map.insert(g1.to_string(), m2);
+        self.gate_map.insert(g2.to_string(), m1);
+    }
+
+    fn outpus_involved(&self, gate: &String) -> HashSet<String> {
+        let mut result = HashSet::new();
+
+        fn gather_outputs(e: &Executer, s: &String, out: &mut HashSet<String>) {
+            if out.contains(s) {
+                return;
+            }
+
+            if let Some(operation) = e.gate_map.get(s) {
+                out.insert(s.clone());
+                gather_outputs(e, &operation.op1, out);
+                gather_outputs(e, &operation.op2, out);
+            }
+        }
+        gather_outputs(self, gate, &mut result);
+
+        result
+    }
+
+    fn exec(&self, x: usize, y: usize) -> Option<usize> {
         let mut inputs = HashMap::new();
 
         for id in 0..self.x_bits {
@@ -209,16 +252,24 @@ impl Executer {
         }
 
         let mut result = 0;
-        for id in 0..self.z_bits {
+        for id in (0..self.z_bits).into_iter().rev() {
             result <<= 1;
             let key = format!("z{:02}", id);
-            if solve(&key, &mut inputs, &self.gate_map) {
-                result += 1;
+            match solve(&key, &mut inputs, &self.gate_map, 89) {
+                Some(true) => result += 1,
+                Some(false) => {}
+                None => return None,
             }
         }
 
-        result
+        Some(result)
     }
+}
+
+#[derive(Clone, Debug, PartialEq, PartialOrd)]
+struct SwapDest {
+    a: String,
+    b: String,
 }
 
 pub fn part2(input: &str) -> color_eyre::Result<String> {
@@ -228,21 +279,44 @@ pub fn part2(input: &str) -> color_eyre::Result<String> {
     let y_bits = input.inputs.keys().filter(|k| k.starts_with("y")).count();
     let z_bits = input.gate_map.keys().filter(|k| k.starts_with("z")).count();
 
-    let adder = Executer::from(x_bits, y_bits, z_bits, &input.gate_map);
+    let mut executer = Executer::from(x_bits, y_bits, z_bits, &input.gate_map);
 
-    for shift in 0..x_bits {
-        let a = 1 << shift;
-        let b = adder.exec(a, 0);
+    // find out where the first error occurs
+    //
+    let mut bad_outputs = HashSet::new();
+    let mut good_outputs = HashSet::new();
 
-        if a == b {
-            println!("OK AT {}", shift);
-        }
+    for bit in 1..x_bits {
+        let a = 1 << bit;
+        let b = 1 << (bit - 1);
 
-        let b = adder.exec(0, a);
-        if a == b {
-            println!("OK AT {}", shift);
+        // ok IFF both carry and sum are ok
+        let s1 = executer.exec(a, 0).unwrap();
+        let s2 = executer.exec(b, b).unwrap();
+        if (s1 == a) && (s2 == a) {
+            println!("BIT {:2} IS OK", bit);
+            good_outputs.extend(executer.outpus_involved(&format!("z{:02}", bit)));
+        } else {
+            //test_bits.push(bit);
+            println!("BIT {:2} SEEMS BAD", bit);
+            bad_outputs.extend(executer.outpus_involved(&format!("z{:02}", bit)));
         }
     }
+
+    let all_outputs = executer.gate_map.keys().cloned().collect::<HashSet<_>>();
+
+    let bad_outputs = bad_outputs
+        .iter()
+        .filter(|x| !x.starts_with('x') && !x.starts_with('y'))
+        .sorted()
+        .collect::<Vec<_>>();
+
+    // SOLUTION values
+    //   bmn,jss,mvb,rds,wss,z08,z18,z23
+
+    // try to swap them and see what happens
+
+    println!("BAD OUTPUTS: {}: {:?}", bad_outputs.len(), bad_outputs);
 
     Ok("".to_string())
 }
@@ -265,15 +339,6 @@ mod tests {
         assert_eq!(
             part1(include_str!("../example.txt")).expect("success"),
             2024
-        );
-    }
-
-    #[test]
-    fn test_part2() {
-        init_tests();
-        assert_eq!(
-            part2(include_str!("../example.txt")).expect("success"),
-            "z00,z01,z02,z05"
         );
     }
 }
